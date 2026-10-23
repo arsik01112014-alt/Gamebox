@@ -30,6 +30,45 @@
       "$uid": {
         ".write": "auth != null && auth.uid === 'ADMIN_UID'"
       }
+    },
+    "profiles": {
+      ".read": "auth != null",
+      "$uid": {
+        ".write": "auth != null && auth.uid === $uid && !root.child('bans').child(auth.uid).exists()"
+      }
+    },
+    "badges": {
+      ".read": "auth != null",
+      "$uid": {
+        ".write": "auth != null && auth.uid === 'ADMIN_UID'"
+      }
+    },
+    "friends": {
+      ".read": "auth != null",
+      "$uid": {
+        ".write": "auth != null && auth.uid === $uid && !root.child('bans').child(auth.uid).exists()"
+      }
+    },
+    "freq": {
+      "$uid": {
+        ".read": "auth != null && (auth.uid === $uid || auth.uid === 'ADMIN_UID')",
+        "$from": {
+          ".write": "auth != null && (auth.uid === $from || auth.uid === $uid) && !root.child('bans').child(auth.uid).exists()"
+        }
+      }
+    },
+    "ips": {
+      ".read": "auth != null && auth.uid === 'ADMIN_UID'",
+      "$uid": {
+        ".write": "auth != null && auth.uid === $uid"
+      }
+    },
+    "ipbans": {
+      ".read": "auth != null && auth.uid === 'ADMIN_UID'",
+      "$ip": {
+        ".read": "auth != null",
+        ".write": "auth != null && auth.uid === 'ADMIN_UID'"
+      }
     }
   }
 }

@@ -972,6 +972,7 @@
       '<div><b>' + store.get('plays', 0) + '</b><small>' + t('prof.plays') + '</small></div>' +
       '<div><b>' + fmtTime(tt) + '</b><small>' + t('prof.time') + '</small></div>' +
       '<div><b>🔥 ' + (streak.best || streak.n || 0) + '</b><small>' + t('prof.streak') + '</small></div></div>' +
+      '<div class="bdgs">' + badgesHtml(myBadges) + '</div><button class="btn sec" data-friends="1">👥 Друзья</button>' +
       '<div class="sec">Настройки профиля</div>' +
       '<input id="pStatusIn" class="pstat-in" maxlength="40" placeholder="Статус (до 40 символов)" value="' + escapeHtml(store.get('pStatus', '')) + '">' +
       '<div class="pcolors">' + PCOLORS.map(function (c) { return '<button class="pcol' + (store.get('pColor', '') === c ? ' on' : '') + '" data-pcolor="' + c + '" style="background:' + (c || '#334155') + '"></button>'; }).join('') + '</div>' +
@@ -1208,7 +1209,7 @@
     if (err) h += '<div class="note pnote">' + t('on.offline') + '</div>';
     else if (rows === null) h += '<div class="lwait"><span class="spin"></span></div>';
     else if (!rows.length) h += '<div class="note pnote">' + t('lb.empty') + '</div>';
-    else rows.forEach(function (r, i) { h += '<div class="pg" style="' + (r.u === me ? 'outline:2px solid #facc15' : '') + '"><span class="pm">' + (i < 3 ? ['🥇', '🥈', '🥉'][i] : '<i>' + (i + 1) + '</i>') + '</span><div class="pn"><b>' + escapeHtml((r.a || '') + ' ' + (r.n || '?')) + '</b></div><b>' + r.s + '</b></div>'; });
+    else rows.forEach(function (r, i) { h += '<div class="pg" data-player="' + escapeHtml(r.u) + '" style="' + (r.u === me ? 'outline:2px solid #facc15' : '') + '"><span class="pm">' + (i < 3 ? ['🥇', '🥈', '🥉'][i] : '<i>' + (i + 1) + '</i>') + '</span><div class="pn"><b>' + escapeHtml((r.a || '') + ' ' + (r.n || '?')) + '</b></div><b>' + r.s + '</b></div>'; });
     $('#setBody').innerHTML = h + '</div><button class="btn" data-set="close">' + t('set.done') + '</button>';
   }
   function openLb(id, d) {
@@ -1229,7 +1230,7 @@
     if (err) h += '<div class="note pnote">' + t('on.offline') + '</div>';
     else if (!rows) h += '<div class="lwait"><span class="spin"></span></div>';
     else if (!rows.length) h += '<div class="note pnote">' + t('lb.empty') + '</div>';
-    else rows.forEach(function (r, i) { h += '<div class="pg" style="' + (r.u === me ? 'outline:2px solid #facc15' : '') + '"><span class="pm">' + (i < 3 ? ['🥇', '🥈', '🥉'][i] : '<i>' + (i + 1) + '</i>') + '</span><div class="pn"><b>' + escapeHtml((r.a || '') + ' ' + (r.n || '?')) + '</b></div><b>' + r.s + '</b></div>'; });
+    else rows.forEach(function (r, i) { h += '<div class="pg" data-player="' + escapeHtml(r.u) + '" style="' + (r.u === me ? 'outline:2px solid #facc15' : '') + '"><span class="pm">' + (i < 3 ? ['🥇', '🥈', '🥉'][i] : '<i>' + (i + 1) + '</i>') + '</span><div class="pn"><b>' + escapeHtml((r.a || '') + ' ' + (r.n || '?')) + '</b></div><b>' + r.s + '</b></div>'; });
     $('#setBody').innerHTML = h + '</div><button class="btn" data-set="close">' + t('set.done') + '</button>';
   }
   /* ---------- вход через Google: только на сайте, в WebView приложения Google вход запрещает ---------- */
@@ -1341,23 +1342,110 @@
     if (b.getAttribute('data-acct') === 'guest') acctGuest(); else googleLogin();
   });
   if (!store.get('acct', null)) acctShow();
-  /* ---------- «в сети» для админки и бан ---------- */
+  /* ---------- «в сети», публичный профиль, баны (аккаунт и IP), значки ---------- */
   // присутствие пишется как рекорд-время в lb/_seen_0/{uid}: s только растёт, поэтому подходят правила рейтинга
+  var BADGES = { creator: ['👑', 'Создатель'], admin: ['🛡️', 'Админ'], moder: ['🔨', 'Модератор'], tester: ['🧪', 'Тестер'], vip: ['💎', 'VIP'], verified: ['✅', 'Проверен'] };
+  var banAcc = false, banIp = false, myBadges = {}, myIp = null;
+  function badgesHtml(b) {
+    return Object.keys(BADGES).filter(function (k) { return b && b[k]; }).map(function (k) { return '<span class="bdg bdg-' + k + '">' + BADGES[k][0] + ' ' + BADGES[k][1] + '</span>'; }).join('');
+  }
+  function ipKey(ip) { return String(ip).replace(/[.:]/g, '_'); }
+  function profileData() {
+    var mc = medalCount(), a = store.get('acct', null) || {};
+    return { n: deviceName().slice(0, 16), a: avatar(), st: store.get('pStatus', ''), c: store.get('pColor', ''), ty: a.type || 'guest',
+      lv: lvlInfo(store.get('xp', 0)).n, md: [mc[3], mc[2], mc[1]], pl: store.get('plays', 0), since: store.get('since', ''), t: { '.sv': 'timestamp' } };
+  }
   function beatPresence() {
     if (document.hidden || !Online.ok()) return;
     Online.auth(function (tok) {
       if (!tok) return;
-      Online.req('PUT', '/lb/_seen_0/' + Online.me, function () { return { s: { '.sv': 'timestamp' }, n: deviceName().slice(0, 16), a: avatar(), t: { '.sv': 'timestamp' } }; });
-      Online.req('GET', '/bans/' + Online.me, undefined, function (e, v) { setBanned(!e && !!v); });
+      var me = Online.me;
+      Online.req('PUT', '/lb/_seen_0/' + me, function () { return { s: { '.sv': 'timestamp' }, n: deviceName().slice(0, 16), a: avatar(), t: { '.sv': 'timestamp' } }; });
+      Online.req('PUT', '/profiles/' + me, profileData);
+      Online.req('GET', '/bans/' + me, undefined, function (e, v) { banAcc = !e && !!v; setBanned(); });
+      Online.req('GET', '/badges/' + me, undefined, function (e, v) { if (!e) myBadges = v || {}; });
+      // IP нужен только для бана по адресу; читать его может только админ (см. правила базы)
+      if (myIp) checkIpBan();
+      else fetch('https://api.ipify.org?format=json').then(function (r) { return r.json(); }).then(function (j) {
+        myIp = j.ip; Online.req('PUT', '/ips/' + me, { ip: myIp, t: { '.sv': 'timestamp' } }); checkIpBan();
+      }).catch(function () { });
     });
   }
-  function setBanned(on) {
-    var el = document.getElementById('banned');
+  function checkIpBan() { Online.req('GET', '/ipbans/' + ipKey(myIp), undefined, function (e, v) { banIp = !e && !!v; setBanned(); }); }
+  function setBanned() {
+    var on = banAcc || banIp, el = document.getElementById('banned');
     if (!on) { if (el) el.remove(); return; }
     if (el) return;
     el = document.createElement('div'); el.id = 'banned';
-    el.innerHTML = '<div class="acct-card"><h3>🚫 Вы заблокированы</h3><p>Администратор заблокировал этот аккаунт.</p></div>';
+    el.innerHTML = '<div class="acct-card"><h3>🚫 Вы заблокированы</h3><p>Администратор заблокировал ' + (banAcc ? 'этот аккаунт' : 'доступ с этого адреса') + '.</p></div>';
     document.body.appendChild(el);
+  }
+  /* ---------- профиль другого игрока и друзья ---------- */
+  // дружба взаимная: friends/{я}/{он} и friends/{он}/{я}; заявка лежит в freq/{кому}/{от кого}
+  function getJ(path) { return new Promise(function (res) { Online.req('GET', path, undefined, function (e, v) { res(e ? null : v); }); }); }
+  function putJ(method, path, body) { return new Promise(function (res, rej) { Online.req(method, path, body, function (e, v) { if (e) rej(e); else res(v); }); }); }
+  function isOnline(t) { return !!t && Date.now() - t < 180000; }
+  function sheetWait() { sheet.classList.remove('profile'); sheet.classList.add('show'); $('#setBody').innerHTML = '<div class="lwait"><span class="spin"></span></div>'; }
+  function openPlayer(uid) {
+    sheetWait();
+    Online.auth(function () {
+      var me = Online.me;
+      Promise.all([getJ('/profiles/' + uid), getJ('/badges/' + uid), getJ('/friends/' + me + '/' + uid), getJ('/friends/' + uid + '/' + me), getJ('/freq/' + me + '/' + uid)]).then(function (r) {
+        var p = r[0] || {}, md = p.md || [], fr = r[2] && r[3], out = r[2] && !r[3], inc = !!r[4];
+        var act = uid === me ? '' : fr ? '<button class="btn sec" data-funf="' + uid + '">✓ В друзьях · удалить</button>' :
+          out ? '<button class="btn sec" data-funf="' + uid + '">Заявка отправлена · отменить</button>' :
+          '<button class="btn" data-fadd="' + uid + '">' + (inc ? '✓ Принять заявку в друзья' : '➕ Добавить в друзья') + '</button>';
+        $('#setBody').innerHTML = '<h3>' + escapeHtml((p.a || '🙂') + ' ' + (p.n || 'Игрок')) + '</h3>' +
+          '<div class="bdgs">' + badgesHtml(r[1]) + '</div>' +
+          (p.st ? '<div class="note pnote">«' + escapeHtml(p.st) + '»</div>' : '') +
+          '<div class="pstats"><div><b>' + (p.lv || 1) + '</b><small>Уровень</small></div>' +
+          '<div><b>🥇' + (md[0] || 0) + ' 🥈' + (md[1] || 0) + ' 🥉' + (md[2] || 0) + '</b><small>Медали</small></div>' +
+          '<div><b>' + (p.pl || 0) + '</b><small>Партий</small></div>' +
+          '<div><b>' + (isOnline(p.t) ? '🟢' : p.t ? new Date(p.t).toLocaleDateString('ru-RU') : '—') + '</b><small>' + (isOnline(p.t) ? 'В сети' : 'Заходил(а)') + '</small></div></div>' +
+          '<div class="note pnote">' + (p.ty === 'google' ? 'Вход через Google' : 'Гость') + (p.since ? ' · играет с ' + escapeHtml(p.since) : '') + ' · ID ' + escapeHtml(uid.slice(0, 10)) + '</div>' +
+          act + '<button class="btn sec" data-friends="1">👥 Мои друзья</button><button class="btn" data-set="close">' + t('set.done') + '</button>';
+      });
+    });
+  }
+  function openFriends() {
+    sheetWait();
+    Online.auth(function (tok) {
+      if (!tok) { $('#setBody').innerHTML = '<div class="note pnote">' + t('on.offline') + '</div><button class="btn" data-set="close">' + t('set.done') + '</button>'; return; }
+      var me = Online.me;
+      Promise.all([getJ('/friends/' + me), getJ('/freq/' + me)]).then(function (r) {
+        var mine = Object.keys(r[0] || {}).filter(function (u) { return r[0][u]; }), inc = r[1] || {};
+        var ids = mine.concat(Object.keys(inc).filter(function (u) { return mine.indexOf(u) < 0; })).slice(0, 50);
+        return Promise.all(ids.map(function (u) {
+          return Promise.all([getJ('/profiles/' + u), mine.indexOf(u) >= 0 ? getJ('/friends/' + u + '/' + me) : null]).then(function (x) {
+            return { u: u, p: x[0] || inc[u] || {}, mutual: !!x[1], mine: mine.indexOf(u) >= 0, inc: !!inc[u] };
+          });
+        }));
+      }).then(function (list) {
+        function row(f, sub) { return '<div class="pg" data-player="' + f.u + '"><span class="pm">' + (isOnline(f.p.t) ? '🟢' : '⚪') + '</span><div class="pn"><b>' + escapeHtml((f.p.a || '') + ' ' + (f.p.n || 'Игрок')) + '</b><small>' + sub + '</small></div></div>'; }
+        var fr = list.filter(function (f) { return f.mine && f.mutual; }), inc = list.filter(function (f) { return f.inc && !f.mine; }), out = list.filter(function (f) { return f.mine && !f.mutual; });
+        $('#setBody').innerHTML = '<h3>👥 Друзья</h3>' +
+          '<div class="promo"><input id="friendIn" placeholder="ID друга"><button class="btn" data-fbyid="1">Добавить</button></div>' +
+          '<div class="note pnote">Свой ID копируется в профиле. Друзьями становятся, когда оба добавили друг друга.</div>' +
+          (inc.length ? '<div class="sec">Заявки (' + inc.length + ')</div><div class="plist">' + inc.map(function (f) { return row(f, 'хочет дружить · нажми, чтобы ответить'); }).join('') + '</div>' : '') +
+          '<div class="sec">Друзья (' + fr.length + ')</div><div class="plist">' + (fr.length ? fr.map(function (f) { return row(f, isOnline(f.p.t) ? 'в сети' : 'не в сети'); }).join('') : '<div class="note pnote">Пока никого нет.</div>') + '</div>' +
+          (out.length ? '<div class="sec">Отправленные заявки</div><div class="plist">' + out.map(function (f) { return row(f, 'ждёт ответа'); }).join('') + '</div>' : '') +
+          '<button class="btn" data-set="close">' + t('set.done') + '</button>';
+      });
+    });
+  }
+  function addFriend(uid) {
+    var me = Online.me;
+    if (!uid || uid === me) { api.toast('Это твой ID'); return; }
+    putJ('PUT', '/friends/' + me + '/' + uid, true).then(function () {
+      return getJ('/freq/' + me + '/' + uid).then(function (inc) {
+        return inc ? putJ('DELETE', '/freq/' + me + '/' + uid) : putJ('PUT', '/freq/' + uid + '/' + me, { n: deviceName().slice(0, 16), a: avatar(), t: { '.sv': 'timestamp' } });
+      });
+    }).then(function () { api.toast('Готово'); openPlayer(uid); }, function () { api.toast('Не получилось, проверь интернет'); });
+  }
+  function removeFriend(uid) {
+    var me = Online.me;
+    putJ('DELETE', '/friends/' + me + '/' + uid).then(function () { return putJ('DELETE', '/freq/' + uid + '/' + me).catch(function () { }); })
+      .then(function () { api.toast('Удалено'); openPlayer(uid); }, function () { api.toast('Не получилось'); });
   }
   setTimeout(beatPresence, 3000); setInterval(beatPresence, 60000);
   document.addEventListener('visibilitychange', function () { if (!document.hidden) beatPresence(); });
@@ -1458,6 +1546,12 @@
     if (pz) { Sound.play('click'); sheet.classList.remove('show', 'profile'); startGame(pz.getAttribute('data-play')); return; }
     if (tz) { Music.pick = +tz.getAttribute('data-track'); store.set('track', Music.pick); Music.preview(); renderSettings(); return; }
     if (fz) { Gfx.fps = +fz.getAttribute('data-fps'); store.set('fps', Gfx.fps); Gfx.lastDraw = 0; Sound.play('click'); renderSettings(); return; }
+    var plz = e.target.closest('[data-player]');
+    if (plz) { Sound.play('click'); openPlayer(plz.getAttribute('data-player')); return; }
+    if (e.target.closest('[data-friends]')) { Sound.play('click'); openFriends(); return; }
+    var faz = e.target.closest('[data-fadd]'); if (faz) { addFriend(faz.getAttribute('data-fadd')); return; }
+    var fuz = e.target.closest('[data-funf]'); if (fuz) { removeFriend(fuz.getAttribute('data-funf')); return; }
+    if (e.target.closest('[data-fbyid]')) { addFriend((document.getElementById('friendIn').value || '').trim()); return; }
     if (e.target.closest('[data-ovr]')) { Sound.play('click'); openOverall(); return; }
     var pcz = e.target.closest('[data-pcolor]');
     if (pcz) { saveStatus(); store.set('pColor', pcz.getAttribute('data-pcolor')); Sound.play('click'); renderProfile(); renderProfileChip(); return; }

@@ -576,3 +576,12 @@ html, body { font-family: "Inter", system-ui, -apple-system, "Segoe UI", Roboto,
 
 /* экран бана */
 #banned{position:fixed;inset:0;z-index:10000;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(2,6,23,.97)}
+
+/* значки и профили игроков */
+.bdgs{display:flex;flex-wrap:wrap;gap:6px;margin:4px 0 8px}
+.bdgs:empty{display:none}
+.bdg{font-size:12px;font-weight:800;padding:4px 9px;border-radius:999px;background:rgba(148,163,184,.25)}
+.bdg-creator{background:linear-gradient(135deg,#f59e0b,#facc15);color:#1c1917}
+.bdg-admin{background:#dc2626;color:#fff}.bdg-moder{background:#ea580c;color:#fff}.bdg-tester{background:#0891b2;color:#fff}
+.bdg-vip{background:linear-gradient(135deg,#8b5cf6,#ec4899);color:#fff}.bdg-verified{background:#16a34a;color:#fff}
+[data-player]{cursor:pointer}
