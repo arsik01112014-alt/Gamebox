@@ -280,7 +280,7 @@
   function dailyInfo() {
     var key = today(), h = 7;
     for (var i = 0; i < key.length; i++) h = (h * 131 + key.charCodeAt(i)) >>> 0;
-    var pool = ORDER.filter(function (id) { return !GAMES[id].noDaily; });
+    var pool = ORDER.filter(function (id) { return !GAMES[id].noDaily && !LOCKED[id]; });
     var id = pool[h % pool.length], st = store.get('daily', {});
     return { id: id, target: medalsOf(id)[0], done: st.date === key && st.done, key: key, xp: 120 };
   }
@@ -312,6 +312,23 @@
   var AVATARS = [['😀', 0], ['😎', 0], ['🐱', 50], ['🦊', 50], ['🐼', 80], ['🐸', 80], ['🦁', 120], ['🐙', 120], ['🤖', 200], ['👽', 200], ['🐲', 350], ['👑', 600]];
   function coins() { return store.get('coins', 0); }
   function addCoins(n) { store.set('coins', Math.max(0, coins() + n)); }
+  // игры за монеты: цена открытия, открытые хранятся в store 'unlocked'
+  var LOCKED = { mario: 600, billiards: 500, towerdef: 500, pinball: 400, minigolf: 400, bowling: 300, mahjong: 300, lines: 250, wordle: 250 };
+  var unlockAsk = null;
+  if (!store.get('since', '')) store.set('since', new Date().toLocaleDateString('ru-RU'));
+  function isLocked(id) { return !!LOCKED[id] && store.get('unlocked', []).indexOf(id) < 0; }
+  // подтверждение повторным нажатием: confirm() в WebView приложения может не показываться
+  function askUnlock(id) {
+    var price = LOCKED[id];
+    if (coins() < price) { api.toast('🔒 Нужно ' + price + ' монет, у тебя ' + coins()); return; }
+    if (!unlockAsk || unlockAsk.id !== id || Date.now() - unlockAsk.t > 4000) { unlockAsk = { id: id, t: Date.now() }; api.toast('🔒 Нажми ещё раз, чтобы открыть за ' + price + ' монет'); return; }
+    unlockAsk = null; addCoins(-price); store.set('unlocked', store.get('unlocked', []).concat(id));
+    Sound.play('bonus'); api.toast('🔓 «' + gt(id, 'title') + '» открыта!'); renderMenu();
+  }
+  function favGame() {
+    var id = ORDER.slice().sort(function (a, b) { return gstat(b).p - gstat(a).p; })[0];
+    return id && gstat(id).p ? gt(id, 'title') : '—';
+  }
   function owned(k) { return store.get('owned', []).indexOf(k) >= 0; }
   function themeOf() { var id = store.get('theme', 'night'); return THEMES.filter(function (x) { return x.id === id; })[0] || THEMES[0]; }
   function avatar() { return store.get('avatar', '😀'); }
@@ -865,6 +882,7 @@
       tag.style.background = DIFF_COL[dd];
       card.querySelector('.mdl').textContent = MEDAL_IC[medal(id)];
       card.classList.toggle('isfav', isFav(id));
+      card.classList.toggle('locked', isLocked(id)); card.setAttribute('data-price', isLocked(id) ? '🔒 ' + LOCKED[id] : '');
     });
     $('#total').textContent = t('menu.stats', plays, played, ORDER.length);
     $('#rndTxt').textContent = t('menu.random');
@@ -909,7 +927,7 @@
     Sound.init(); Sound.play('click'); startGame(c.getAttribute('data-id'));
   });
   $('#rnd').addEventListener('click', function () {
-    var vis = ORDER.filter(function (id) { return inCat(id, menuCat); });
+    var vis = ORDER.filter(function (id) { return inCat(id, menuCat) && !isLocked(id); });
     if (!vis.length) vis = ORDER;
     Sound.init(); Sound.play('bonus');
     startGame(vis[Math.floor(Math.random() * vis.length)]);
@@ -939,6 +957,11 @@
       '<div><b>' + store.get('plays', 0) + '</b><small>' + t('prof.plays') + '</small></div>' +
       '<div><b>' + fmtTime(tt) + '</b><small>' + t('prof.time') + '</small></div>' +
       '<div><b>🔥 ' + (streak.best || streak.n || 0) + '</b><small>' + t('prof.streak') + '</small></div></div>' +
+      '<div class="sec">Аккаунт</div><div class="pstats">' +
+      '<div><b>' + ((store.get('acct', null) || {}).type === 'google' ? 'Google' : 'Гость') + '</b><small>Вход</small></div>' +
+      '<div><b>' + escapeHtml(favGame()) + '</b><small>Любимая игра</small></div>' +
+      '<div><b>' + ORDER.filter(function (id) { return !isLocked(id); }).length + ' / ' + ORDER.length + '</b><small>Открыто игр</small></div>' +
+      '<div><b>' + escapeHtml(store.get('since', '')) + '</b><small>Играет с</small></div></div>' +
       '<div class="sec">' + t('ach.title') + ' · ' + got.length + ' / ' + ACH.length + '</div>' + achHtml +
       '<div class="sec">' + t('prof.medals') + ' · 🥇' + mc[3] + ' 🥈' + mc[2] + ' 🥉' + mc[1] + ' / ' + ORDER.length * 3 + '</div>' +
       '<div class="note pnote">' + t('prof.medalHint') + '</div>' +
@@ -1371,6 +1394,7 @@
   }
 
   function startGame(id) {
+    if (isLocked(id)) { askUnlock(id); return; }
     var d = GAMES[id];
     var rec = store.get('recent', []).filter(function (x) { return x !== id; });
     rec.unshift(id); store.set('recent', rec.slice(0, 6));
