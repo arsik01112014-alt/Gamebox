@@ -999,11 +999,34 @@
   new MutationObserver(function () { if (!sheetEl.classList.contains('show')) sheetClosedT = Date.now(); }).observe(sheetEl, { attributes: true, attributeFilter: ['class'] });
   function safeTap() { var now = Date.now(); return now - lastScrollT > 350 && now - sheetClosedT > 450; }
   $('#coinBtn').addEventListener('click', function () { if (!safeTap()) return; Sound.init(); Sound.play('click'); renderShop(); sheet.classList.add('show', 'profile'); });
+  // ежедневная награда: серия из 7 дней, пропуск дня сбрасывает серию
+  var GIFTS = [50, 75, 100, 150, 200, 300, 500];
+  function giftState() {
+    var g = store.get('dailyGift', { d: '', n: 0 }), claimed = g.d === today();
+    var streak = claimed || g.d === today(-1) ? g.n : 0;
+    return { claimed: claimed, streak: streak, next: claimed ? streak : streak + 1 };
+  }
+  function giftHtml() {
+    var G = giftState(), day = (G.next - 1) % 7;
+    return '<div class="sec">🎁 Ежедневная награда</div><div class="gifts">' + GIFTS.map(function (c, i) {
+      var cls = i < day || (G.claimed && i === day) ? ' got' : i === day ? ' now' : '';
+      return '<div class="gift' + cls + '"><small>День ' + (i + 1) + '</small><b>' + c + '</b></div>';
+    }).join('') + '</div>' +
+      (G.claimed ? '<div class="note pnote">Награда получена, приходи завтра. Серия: ' + G.streak + ' дн.</div>'
+        : '<button class="btn" data-gift="1">Забрать ' + GIFTS[day] + ' монет</button>');
+  }
+  function claimGift() {
+    var G = giftState(); if (G.claimed) return;
+    var c = GIFTS[(G.next - 1) % 7];
+    store.set('dailyGift', { d: today(), n: G.next }); addCoins(c);
+    fxConfetti(40); Sound.play('bonus'); api.toast('🎁 +' + c + ' монет! Серия: ' + G.next + ' дн.');
+    renderShop(); renderProfileChip();
+  }
   function renderShop() {
     var cur = themeOf().id, av = avatar();
     $('#setBody').innerHTML = '<h3>🛍️ ' + t('shop.title') + '</h3>' +
       '<div class="shopbal"><span>' + t('shop.balance') + '</span><b><span class=\"coin\"></span>' + coins() + '</b></div>' +
-      '<div class="note pnote">' + t('shop.hint') + '</div>' +
+      '<div class="note pnote">' + t('shop.hint') + '</div>' + giftHtml() +
       '<div class="sec">' + t('shop.themes') + '</div><div class="themes">' + THEMES.map(function (T) {
         var own = T.price === 0 || owned('t:' + T.id);
         return '<button class="thm' + (T.id === cur ? ' sel' : '') + '" data-buy="t:' + T.id + '">' + (skinOf() === 'glass' ? '<i style="background:radial-gradient(circle at 30% 30%,rgba(' + T.blobs[0] + ',.9),transparent 60%),radial-gradient(circle at 80% 70%,rgba(' + T.blobs[1] + ',.9),transparent 60%),' + T.bg + '"></i>' : '<i style="background:' + T.v[0] + '"><b style="position:absolute;left:10px;top:10px;width:26px;height:26px;border-radius:7px;background:' + T.v[5] + ';border:2px solid ' + T.v[3] + ';box-shadow:3px 3px 0 ' + T.v[7] + '"></b><b style="position:absolute;right:10px;bottom:10px;width:34px;height:14px;border-radius:4px;background:' + T.v[1] + ';border:2px solid ' + T.v[3] + '"></b></i>') +
@@ -1418,6 +1441,7 @@
     var pcz = e.target.closest('[data-pcolor]');
     if (pcz) { saveStatus(); store.set('pColor', pcz.getAttribute('data-pcolor')); Sound.play('click'); renderProfile(); renderProfileChip(); return; }
     if (e.target.closest('[data-lbhide]')) { saveStatus(); store.set('lbHide', !store.get('lbHide', false)); Sound.play('click'); renderProfile(); return; }
+    if (e.target.closest('[data-gift]')) { claimGift(); return; }
     if (e.target.closest('[data-promo]')) { saveStatus(); redeemPromo(); return; }
     if (e.target.closest('[data-copyid]')) { try { navigator.clipboard.writeText(Online.me || ''); } catch (e2) { } api.toast('ID скопирован'); return; }
     if (e.target.closest('[data-glogin]')) { Sound.play('click'); googleLogin(); return; }
