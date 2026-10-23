@@ -7,7 +7,7 @@
     'stack', 'jumper', 'memory', 'mole', 'simon',
     'asteroids', 'crossy', 'fruit', 'knife', 'tiles', 'bubbles', 'connect4', 'reversi',
     'puzzle15', 'blocks', 'colorjump', 'airhockey', 'racing', 'archery', 'basket', 'maze', 'solitaire', 'yahtzee',
-    'sokoban', 'watersort', 'mahjong', 'gomoku', 'dots', 'bowling', 'minigolf', 'pinball', 'penalty', 'towerdef', 'numbers', 'reflex', 'dodge', 'lights', 'flood', 'hangman', 'nim', 'blackjack', 'guess', 'bulls', 'wordle', 'lines'].filter(function (id) { return GAMES[id]; });
+    'sokoban', 'watersort', 'mahjong', 'gomoku', 'dots', 'bowling', 'minigolf', 'pinball', 'penalty', 'towerdef', 'numbers', 'reflex', 'dodge', 'lights', 'flood', 'hangman', 'nim', 'blackjack', 'guess', 'bulls', 'wordle', 'lines', 'blockblast', 'arrows'].filter(function (id) { return GAMES[id]; });
   var $ = function (s) { return document.querySelector(s); };
 
   /* ---------- хранилище ---------- */
@@ -966,6 +966,7 @@
       '<input id="pStatusIn" class="pstat-in" maxlength="40" placeholder="Статус (до 40 символов)" value="' + escapeHtml(store.get('pStatus', '')) + '">' +
       '<div class="pcolors">' + PCOLORS.map(function (c) { return '<button class="pcol' + (store.get('pColor', '') === c ? ' on' : '') + '" data-pcolor="' + c + '" style="background:' + (c || '#334155') + '"></button>'; }).join('') + '</div>' +
       '<button class="row" data-lbhide="1"><span class="rl"><em>🙈</em>Скрыть меня из рейтинга</span><span>' + (store.get('lbHide', false) ? 'Вкл' : 'Выкл') + '</span></button>' +
+      '<div class="promo"><input id="promoIn" maxlength="24" placeholder="Промокод"><button class="btn" data-promo="1">OK</button></div>' +
       '<button class="row" data-copyid="1"><span class="rl"><em>🆔</em>Мой ID: ' + escapeHtml((Online.me || '—').slice(0, 10)) + '</span><span>📋</span></button>' +
       '<div class="sec">Аккаунт</div><div class="pstats">' +
       '<div><b>' + ((store.get('acct', null) || {}).type === 'google' ? 'Google' : 'Гость') + '</b><small>Вход</small></div>' +
@@ -1222,6 +1223,49 @@
     store.set('acct', null);
     api.toast('Вы вышли из Google'); renderProfile(); acctShow();
   }
+  /* ---------- промокоды и пасхалки ---------- */
+  // в коде лежат только хэши промокодов; каждый код срабатывает один раз на устройстве
+  var PROMO = {
+    'dc3ea9ea': { c: 250 },
+    '25d13f4': { c: 500 },
+    '3fd1a1ed': { c: 1000 },
+    '91e277b7': { u: 'all' },
+    '15371b66': { u: 'mario', c: 100 },
+    'd3439451': { c: 100 },
+    'c67f010f': { c: 300, m: '🥚 Ты нашёл секретный код!' }
+  };
+  function promoHash(s) { var h = 5381; for (var i = 0; i < s.length; i++) h = (h * 33 + s.charCodeAt(i)) >>> 0; return h.toString(16); }
+  function redeemPromo() {
+    var el = document.getElementById('promoIn'), code = (el && el.value || '').toUpperCase().replace(/\s+/g, '');
+    if (!code) return;
+    var key = promoHash(code), r = PROMO[key], used = store.get('promoUsed', []);
+    if (!r) { api.toast('Неверный промокод'); return; }
+    if (used.indexOf(key) >= 0) { api.toast('Этот промокод уже активирован'); return; }
+    store.set('promoUsed', used.concat(key));
+    if (r.u) store.set('unlocked', store.get('unlocked', []).concat(r.u === 'all' ? Object.keys(LOCKED) : [r.u]));
+    if (r.c) addCoins(r.c);
+    fxConfetti(40); Sound.play('bonus');
+    api.toast(r.m || ('🎁 Промокод активирован' + (r.c ? ': +' + r.c + ' монет' : '') + (r.u ? ', игры открыты' : '')));
+    renderMenu(); renderProfile();
+  }
+  function egg(key, coinsN, msg) {
+    if (store.get('egg_' + key, false)) return false;
+    store.set('egg_' + key, true); addCoins(coinsN); fxConfetti(50); Sound.play('bonus');
+    api.toast(msg + ' +' + coinsN + ' монет'); renderProfileChip(); return true;
+  }
+  // пасхалка 1: код Konami на клавиатуре
+  var KONAMI = ['ArrowUp', 'ArrowUp', 'ArrowDown', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'ArrowLeft', 'ArrowRight', 'b', 'a'], konamiPos = 0;
+  document.addEventListener('keydown', function (e) {
+    var k = e.key.length === 1 ? e.key.toLowerCase() : e.key;
+    konamiPos = k === KONAMI[konamiPos] ? konamiPos + 1 : (k === KONAMI[0] ? 1 : 0);
+    if (konamiPos === KONAMI.length) { konamiPos = 0; egg('konami', 500, '🎮 Код Konami!'); }
+  });
+  // пасхалка 2: 7 быстрых нажатий на приветствие
+  var helloTaps = [];
+  $('#hello').addEventListener('click', function () {
+    var now = Date.now(); helloTaps = helloTaps.filter(function (t) { return now - t < 3000; }).concat(now);
+    if (helloTaps.length >= 7) { helloTaps = []; if (!egg('hello', 100, '🥚 Ты нашёл пасхалку!')) api.toast('👀 Тут больше ничего нет… или есть?'); }
+  });
   /* ---------- первый вход: гость с уникальным ником (выбирается один раз) или Google ---------- */
   // ники лежат в lb/_nick_0/{uid} в том же виде, что рекорды, поэтому подходят текущие правила базы
   function acctShow(err, nick) {
@@ -1358,6 +1402,7 @@
     var pcz = e.target.closest('[data-pcolor]');
     if (pcz) { saveStatus(); store.set('pColor', pcz.getAttribute('data-pcolor')); Sound.play('click'); renderProfile(); renderProfileChip(); return; }
     if (e.target.closest('[data-lbhide]')) { saveStatus(); store.set('lbHide', !store.get('lbHide', false)); Sound.play('click'); renderProfile(); return; }
+    if (e.target.closest('[data-promo]')) { saveStatus(); redeemPromo(); return; }
     if (e.target.closest('[data-copyid]')) { try { navigator.clipboard.writeText(Online.me || ''); } catch (e2) { } api.toast('ID скопирован'); return; }
     if (e.target.closest('[data-glogin]')) { Sound.play('click'); googleLogin(); return; }
     if (e.target.closest('[data-glogout]')) { Sound.play('click'); googleLogout(); return; }
