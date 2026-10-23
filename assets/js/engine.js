@@ -930,7 +930,7 @@
       return '<div class="ach ' + (on ? 'on' : 'off') + '"><em>' + a[1] + '</em><small>' + t('ach.' + a[0]) + '</small></div>';
     }).join('') + '</div>';
     $('#setBody').innerHTML = '<h3>' + t('prof.title') + '</h3>' +
-      '<div class="pname"><button class="av" data-shop="1">' + avatar() + '</button><input id="pnameIn" maxlength="16" value="' + escapeHtml(deviceName()) + '" placeholder="' + t('prof.name') + '"></div>' +
+      '<div class="pname"><button class="av" data-shop="1">' + avatar() + '</button><input id="pnameIn" maxlength="16"' + (store.get('acct', null) ? ' readonly' : '') + ' value="' + escapeHtml(deviceName()) + '" placeholder="' + t('prof.name') + '"></div>' +
       '<div class="plv"><div class="big"><b>' + L.n + '</b><small>' + t('lvl.short') + '</small></div><div class="pr">' +
       '<b>' + t('lvl.r' + L.rank) + '</b><span class="bar"><i style="width:' + Math.round(L.cur / L.need * 100) + '%"></i></span>' +
       '<small>' + t('prof.next', L.n + 1, L.need - L.cur) + '</small></div></div>' +
@@ -1177,6 +1177,7 @@
         Online.me = u.uid;
         store.set('gUser', { n: (u.displayName || u.email || 'Google').slice(0, 16) });
         store.set('netName', (u.displayName || 'Player').slice(0, 16));
+        store.set('acct', { type: 'google', n: googleUser().n }); acctHide();
         resubmitAll();
         api.toast('Вы вошли: ' + googleUser().n); renderProfile();
       });
@@ -1184,8 +1185,44 @@
   }
   function googleLogout() {
     store.set('gUser', null); store.set('fbAuth', null); Online.me = null;
-    api.toast('Вы вышли из Google'); renderProfile();
+    store.set('acct', null);
+    api.toast('Вы вышли из Google'); renderProfile(); acctShow();
   }
+  /* ---------- первый вход: гость с уникальным ником (выбирается один раз) или Google ---------- */
+  // ники лежат в lb/_nick_0/{uid} в том же виде, что рекорды, поэтому подходят текущие правила базы
+  function acctShow(err, nick) {
+    var el = document.getElementById('acct');
+    if (!el) { el = document.createElement('div'); el.id = 'acct'; document.body.appendChild(el); }
+    var val = nick != null ? nick : store.get('netName', '').replace(/^Player-\d+$/, '');
+    el.innerHTML = '<div class="acct-card"><h3>🎮 GameBox</h3><p>Выбери ник. Сменить его потом нельзя.</p>' +
+      '<input id="acctNick" maxlength="16" placeholder="Ник" value="' + escapeHtml(val) + '">' +
+      (err ? '<div class="acct-err">' + escapeHtml(err) + '</div>' : '') +
+      '<button class="btn" data-acct="guest">Играть как гость</button>' +
+      (IS_APP ? '' : '<button class="btn sec" data-acct="google">Войти через Google</button>') + '</div>';
+  }
+  function acctHide() { var el = document.getElementById('acct'); if (el) el.remove(); }
+  function acctGuest() {
+    var nick = (document.getElementById('acctNick').value || '').trim();
+    if (!/^[A-Za-zА-Яа-яЁё0-9_\- ]{3,16}$/.test(nick)) { acctShow('Ник: от 3 до 16 символов, буквы, цифры, _ и -', nick); return; }
+    acctShow('Проверяю ник…', nick);
+    Online.req('GET', '/lb/_nick_0', undefined, function (e, all) {
+      if (e) { acctShow('Нет связи с сервером, попробуй ещё раз', nick); return; }
+      var low = nick.toLowerCase(), mine = all && all[Online.me];
+      var taken = Object.keys(all || {}).some(function (u) { return u !== Online.me && all[u] && String(all[u].n).toLowerCase() === low; });
+      if (taken) { acctShow('Этот ник уже занят', nick); return; }
+      var done = function () { store.set('netName', nick); store.set('acct', { type: 'guest', n: nick }); acctHide(); renderMenu(); };
+      if (mine && mine.n === nick) { done(); return; }
+      Online.req('PUT', '/lb/_nick_0/' + Online.me, { s: 1, n: nick, a: avatar(), t: { '.sv': 'timestamp' } }, function (e2) {
+        if (e2) acctShow('Не удалось сохранить ник, попробуй ещё раз', nick); else done();
+      });
+    });
+  }
+  document.addEventListener('click', function (e) {
+    var b = e.target.closest('[data-acct]'); if (!b) return;
+    Sound.init(); Sound.play('click');
+    if (b.getAttribute('data-acct') === 'guest') acctGuest(); else googleLogin();
+  });
+  if (!store.get('acct', null)) acctShow();
   /* ---------- активные онлайн-матчи под заданиями дня ---------- */
   function renderLive(list) {
     var box = $('#live');
@@ -2025,7 +2062,7 @@
   window.__App = App;
   if (!store.get('onboard', false)) {
     $('#setBody').innerHTML = '<div class="onb"><div class="big">🎮</div><h3>' + t('onb.title') + '</h3><p class="note pnote">' + t('onb.sub') + '</p>' +
-      '<div class="pname"><button class="av" data-shop="1">' + avatar() + '</button><input id="pnameIn" maxlength="16" value="' + escapeHtml(deviceName()) + '" placeholder="' + t('prof.name') + '"></div>' +
+      '<div class="pname"><button class="av" data-shop="1">' + avatar() + '</button><input id="pnameIn" maxlength="16"' + (store.get('acct', null) ? ' readonly' : '') + ' value="' + escapeHtml(deviceName()) + '" placeholder="' + t('prof.name') + '"></div>' +
       '<ul><li>' + t('onb.l1') + '</li><li>' + t('onb.l2') + '</li><li>' + t('onb.l3') + '</li><li>' + t('onb.l4') + '</li></ul>' +
       '<button class="btn" id="onbGo" data-set="close">' + t('onb.go') + '</button></div>';
     sheet.classList.add('show', 'profile'); store.set('onboard', true);
