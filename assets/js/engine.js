@@ -307,9 +307,18 @@
     { id: 'sunset', price: 250, bg: '#1c0910', blobs: ['249,115,22', '244,63,94', '250,204,21'], a1: '#f97316', a2: '#f43f5e', v: ['#f7dccb', '#fff4ec', '#edc4ab', '#2a1418', '#7d5a58', '#e8452c', '#ffffff', '#2a1418'] },
     { id: 'forest', price: 250, bg: '#04130a', blobs: ['34,197,94', '132,204,22', '20,184,166'], a1: '#22c55e', a2: '#14b8a6', v: ['#dfe5cf', '#f7f9ef', '#c8d2b2', '#172117', '#5d6b55', '#2f8f4e', '#ffffff', '#172117'] },
     { id: 'neon', price: 400, dark: true, bg: '#06010f', blobs: ['217,70,239', '34,211,238', '163,230,53'], a1: '#d946ef', a2: '#22d3ee', v: ['#17161c', '#24222b', '#312e39', '#f1e8d8', '#a39aa8', '#c6ff3d', '#17161c', '#000000'] },
-    { id: 'gold', price: 800, bg: '#120e04', blobs: ['250,204,21', '245,158,11', '234,179,8'], a1: '#f59e0b', a2: '#facc15', v: ['#f1df9c', '#fff7d6', '#e3cc79', '#241c06', '#77683a', '#1d1b20', '#f1df9c', '#241c06'] }
+    { id: 'gold', price: 800, bg: '#120e04', blobs: ['250,204,21', '245,158,11', '234,179,8'], a1: '#f59e0b', a2: '#facc15', v: ['#f1df9c', '#fff7d6', '#e3cc79', '#241c06', '#77683a', '#1d1b20', '#f1df9c', '#241c06'] },
+    // новые темы: название задано прямо здесь (name), без строк перевода
+    { id: 'ice', name: 'Лёд', price: 300, bg: '#04121c', blobs: ['186,230,253', '125,211,252', '224,242,254'], a1: '#38bdf8', a2: '#a5f3fc', v: ['#e2eef3', '#f8fcfd', '#cfe2ea', '#10202a', '#577080', '#0284c7', '#ffffff', '#10202a'] },
+    { id: 'candy', name: 'Конфета', price: 300, bg: '#1a0613', blobs: ['244,114,182', '196,181,253', '253,186,116'], a1: '#f472b6', a2: '#c4b5fd', v: ['#f6dde9', '#fff5fa', '#ecc6d8', '#2a1220', '#7a5a6c', '#db2777', '#ffffff', '#2a1220'] },
+    { id: 'mint', name: 'Мята', price: 350, bg: '#031512', blobs: ['52,211,153', '110,231,183', '45,212,191'], a1: '#10b981', a2: '#5eead4', v: ['#d9efe6', '#f4fcf8', '#c1e3d5', '#0f231c', '#557266', '#059669', '#ffffff', '#0f231c'] },
+    { id: 'lava', name: 'Лава', price: 500, dark: true, bg: '#120302', blobs: ['239,68,68', '249,115,22', '234,88,12'], a1: '#ef4444', a2: '#f97316', v: ['#1a0d0b', '#2a1512', '#3a1d18', '#f7dfd6', '#b08a80', '#ff6a3d', '#1a0d0b', '#000000'] },
+    { id: 'space', name: 'Космос', price: 650, dark: true, bg: '#02010a', blobs: ['99,102,241', '168,85,247', '14,165,233'], a1: '#6366f1', a2: '#a855f7', v: ['#0f0f1a', '#191a2b', '#24253a', '#e6e6f5', '#9a9ab8', '#818cf8', '#0f0f1a', '#000000'] },
+    { id: 'royal', name: 'Королевская', price: 1200, bg: '#0d0618', blobs: ['147,51,234', '250,204,21', '79,70,229'], a1: '#9333ea', a2: '#facc15', v: ['#e7dcf3', '#faf6ff', '#d6c6ea', '#1c1029', '#6c5a80', '#7e22ce', '#ffffff', '#1c1029'] }
   ];
-  var AVATARS = [['😀', 0], ['😎', 0], ['🐱', 50], ['🦊', 50], ['🐼', 80], ['🐸', 80], ['🦁', 120], ['🐙', 120], ['🤖', 200], ['👽', 200], ['🐲', 350], ['👑', 600]];
+  var AVATARS = [['😀', 0], ['😎', 0], ['🐱', 50], ['🦊', 50], ['🐼', 80], ['🐸', 80], ['🦁', 120], ['🐙', 120], ['🤖', 200], ['👽', 200], ['🐲', 350], ['👑', 600],
+    ['🐧', 60], ['🐵', 60], ['🐻', 80], ['🦋', 100], ['🐝', 100], ['🐯', 120], ['🦄', 150], ['🎃', 150], ['👻', 150],
+    ['🤠', 200], ['🦖', 250], ['💀', 300], ['🥷', 400], ['🧙', 400], ['🦸', 500], ['💎', 1000]];
   function coins() { return store.get('coins', 0); }
   function addCoins(n) { store.set('coins', Math.max(0, coins() + n)); }
   // игры за монеты: цена открытия, открытые хранятся в store 'unlocked'
@@ -998,7 +1007,7 @@
       '<div class="sec">' + t('shop.themes') + '</div><div class="themes">' + THEMES.map(function (T) {
         var own = T.price === 0 || owned('t:' + T.id);
         return '<button class="thm' + (T.id === cur ? ' sel' : '') + '" data-buy="t:' + T.id + '">' + (skinOf() === 'glass' ? '<i style="background:radial-gradient(circle at 30% 30%,rgba(' + T.blobs[0] + ',.9),transparent 60%),radial-gradient(circle at 80% 70%,rgba(' + T.blobs[1] + ',.9),transparent 60%),' + T.bg + '"></i>' : '<i style="background:' + T.v[0] + '"><b style="position:absolute;left:10px;top:10px;width:26px;height:26px;border-radius:7px;background:' + T.v[5] + ';border:2px solid ' + T.v[3] + ';box-shadow:3px 3px 0 ' + T.v[7] + '"></b><b style="position:absolute;right:10px;bottom:10px;width:34px;height:14px;border-radius:4px;background:' + T.v[1] + ';border:2px solid ' + T.v[3] + '"></b></i>') +
-          '<span>' + t('theme.' + T.id) + '<br>' + (T.id === cur ? '✔' : own ? t('shop.own') : '<span class=\"coin\"></span> ' + T.price) + '</span></button>';
+          '<span>' + (T.name || t('theme.' + T.id)) + '<br>' + (T.id === cur ? '✔' : own ? t('shop.own') : '<span class=\"coin\"></span> ' + T.price) + '</span></button>';
       }).join('') + '</div>' +
       '<div class="sec">' + t('shop.avatars') + '</div><div class="avs">' + AVATARS.map(function (A) {
         var own = A[1] === 0 || owned('a:' + A[0]);
