@@ -982,7 +982,14 @@
       '<div class="plist">' + rows + '</div>' +
       '<button class="btn" data-set="close">' + t('set.done') + '</button>';
   }
-  $('#coinBtn').addEventListener('click', function () { Sound.init(); Sound.play('click'); renderShop(); sheet.classList.add('show', 'profile'); });
+  // защита от случайных нажатий: после прокрутки или закрытия окна «проваливающийся» тап не открывает профиль, магазин и настройки
+  var lastScrollT = 0, sheetClosedT = 0;
+  window.addEventListener('scroll', function () { lastScrollT = Date.now(); }, { passive: true, capture: true });
+  window.addEventListener('touchmove', function () { lastScrollT = Date.now(); }, { passive: true });
+  var sheetEl = $('#settings'); // sheet объявляется ниже, здесь берём элемент напрямую
+  new MutationObserver(function () { if (!sheetEl.classList.contains('show')) sheetClosedT = Date.now(); }).observe(sheetEl, { attributes: true, attributeFilter: ['class'] });
+  function safeTap() { var now = Date.now(); return now - lastScrollT > 350 && now - sheetClosedT > 450; }
+  $('#coinBtn').addEventListener('click', function () { if (!safeTap()) return; Sound.init(); Sound.play('click'); renderShop(); sheet.classList.add('show', 'profile'); });
   function renderShop() {
     var cur = themeOf().id, av = avatar();
     $('#setBody').innerHTML = '<h3>🛍️ ' + t('shop.title') + '</h3>' +
@@ -1012,7 +1019,7 @@
     renderShop(); renderProfileChip(); setTimeout(checkAch, 400);
   }
   function fxConfettiMenu() { var el = document.createElement('div'); el.className = 'toast'; el.style.position = 'fixed'; el.textContent = '🎉'; document.body.appendChild(el); setTimeout(function () { el.remove(); }, 1600); }
-  $('#prof').addEventListener('click', function () { Sound.init(); Sound.play('click'); renderProfile(); sheet.classList.add('show', 'profile'); });
+  $('#prof').addEventListener('click', function () { if (!safeTap()) return; Sound.init(); Sound.play('click'); renderProfile(); sheet.classList.add('show', 'profile'); });
 
   /* ---------- недавние игры ---------- */
   function renderRecent() {
@@ -1375,9 +1382,9 @@
       } catch (e3) { bkArmed = 0; renderBackup('⚠ ' + t('bk.bad')); }
     }
   }
-  $('#setBtn').addEventListener('click', function () { Sound.init(); Sound.play('click'); openSettings(); });
-  $('#topSet').addEventListener('click', function () { Sound.init(); Sound.play('click'); openSettings(); });
-  $('#langBtn').addEventListener('click', function () { Sound.init(); Sound.play('click'); openSettings(); });
+  $('#setBtn').addEventListener('click', function () { if (!safeTap()) return; Sound.init(); Sound.play('click'); openSettings(); });
+  $('#topSet').addEventListener('click', function () { if (!safeTap()) return; Sound.init(); Sound.play('click'); openSettings(); });
+  $('#langBtn').addEventListener('click', function () { if (!safeTap()) return; Sound.init(); Sound.play('click'); openSettings(); });
   sheet.addEventListener('click', function (e) {
     if (e.target === sheet) { closeSettings(); return; }
     var l = e.target.closest('[data-lang]'), s = e.target.closest('[data-set]');
