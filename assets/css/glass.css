@@ -555,3 +555,9 @@ html, body { font-family: "Inter", system-ui, -apple-system, "Segoe UI", Roboto,
 /* игры за монеты */
 .card.locked{filter:grayscale(.85) brightness(.75)}
 .card .lockb{position:absolute;top:14px;right:14px;z-index:5;background:rgba(15,23,42,.88);color:#facc15;font-weight:800;font-size:14px;line-height:1;padding:6px 10px;border-radius:12px;pointer-events:none}
+
+/* настройки профиля */
+.pstat-in{width:100%;box-sizing:border-box;padding:10px 12px;border-radius:12px;border:1px solid rgba(148,163,184,.35);background:rgba(15,23,42,.5);color:inherit;font-size:14px;margin:6px 0}
+.pcolors{display:flex;gap:8px;margin:6px 0 10px;flex-wrap:wrap}
+.pcol{width:30px;height:30px;border-radius:50%;border:2px solid transparent;cursor:pointer;padding:0}
+.pcol.on{border-color:#fff;box-shadow:0 0 0 2px #facc15}

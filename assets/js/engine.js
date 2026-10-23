@@ -779,6 +779,7 @@
     },
     // мировой рейтинг: lb/<игра>_<сложность>/<uid> = {s, n, a, t}; правила базы разрешают только повышать свой рекорд
     submit: function (game, diff, score) {
+      if (store.get('lbHide', false)) return; // игрок скрыл себя из рейтинга
       var self = this;
       this.auth(function (tok) { if (!tok) return; self.req('PUT', '/lb/' + game + '_' + diff + '/' + self.me, function () { return { s: score, n: deviceName().slice(0, 16), a: avatar(), t: { '.sv': 'timestamp' } }; }); });
     },
@@ -910,6 +911,7 @@
     $('#lvBar').style.width = Math.round(L.cur / L.need * 100) + '%';
     $('#mdSum').innerHTML = '🥇<b>' + mc[3] + '</b> 🥈<b>' + mc[2] + '</b> 🥉<b>' + mc[1] + '</b>';
     $('#avEm').textContent = avatar();
+    $('#avEm').style.background = store.get('pColor', '');
     var cn = coins(); $('#coinN').textContent = cn >= 1e6 ? (Math.floor(cn / 1e5) / 10) + 'M' : cn >= 1e4 ? Math.floor(cn / 1e3) + 'K' : cn;
   }
   function renderDaily() {
@@ -960,6 +962,11 @@
       '<div><b>' + store.get('plays', 0) + '</b><small>' + t('prof.plays') + '</small></div>' +
       '<div><b>' + fmtTime(tt) + '</b><small>' + t('prof.time') + '</small></div>' +
       '<div><b>🔥 ' + (streak.best || streak.n || 0) + '</b><small>' + t('prof.streak') + '</small></div></div>' +
+      '<div class="sec">Настройки профиля</div>' +
+      '<input id="pStatusIn" class="pstat-in" maxlength="40" placeholder="Статус (до 40 символов)" value="' + escapeHtml(store.get('pStatus', '')) + '">' +
+      '<div class="pcolors">' + PCOLORS.map(function (c) { return '<button class="pcol' + (store.get('pColor', '') === c ? ' on' : '') + '" data-pcolor="' + c + '" style="background:' + (c || '#334155') + '"></button>'; }).join('') + '</div>' +
+      '<button class="row" data-lbhide="1"><span class="rl"><em>🙈</em>Скрыть меня из рейтинга</span><span>' + (store.get('lbHide', false) ? 'Вкл' : 'Выкл') + '</span></button>' +
+      '<button class="row" data-copyid="1"><span class="rl"><em>🆔</em>Мой ID: ' + escapeHtml((Online.me || '—').slice(0, 10)) + '</span><span>📋</span></button>' +
       '<div class="sec">Аккаунт</div><div class="pstats">' +
       '<div><b>' + ((store.get('acct', null) || {}).type === 'google' ? 'Google' : 'Гость') + '</b><small>Вход</small></div>' +
       '<div><b>' + escapeHtml(favGame()) + '</b><small>Любимая игра</small></div>' +
@@ -1282,7 +1289,10 @@
   });
   setInterval(refreshLive, 6000); refreshLive();
   function openSettings() { resetArmed = 0; renderSettings(); sheet.classList.add('show'); }
+  var PCOLORS = ['', '#ef4444', '#f59e0b', '#22c55e', '#3b82f6', '#a855f7', '#ec4899'];
+  function saveStatus() { var si = document.getElementById('pStatusIn'); if (si) store.set('pStatus', si.value.trim().slice(0, 40)); }
   function closeSettings() {
+    saveStatus();
     var ni = document.getElementById('pnameIn');
     if (ni && ni.value.trim()) store.set('netName', ni.value.trim().slice(0, 16));
     sheet.classList.remove('show', 'profile'); renderMenu();
@@ -1345,6 +1355,10 @@
     if (tz) { Music.pick = +tz.getAttribute('data-track'); store.set('track', Music.pick); Music.preview(); renderSettings(); return; }
     if (fz) { Gfx.fps = +fz.getAttribute('data-fps'); store.set('fps', Gfx.fps); Gfx.lastDraw = 0; Sound.play('click'); renderSettings(); return; }
     if (e.target.closest('[data-ovr]')) { Sound.play('click'); openOverall(); return; }
+    var pcz = e.target.closest('[data-pcolor]');
+    if (pcz) { saveStatus(); store.set('pColor', pcz.getAttribute('data-pcolor')); Sound.play('click'); renderProfile(); renderProfileChip(); return; }
+    if (e.target.closest('[data-lbhide]')) { saveStatus(); store.set('lbHide', !store.get('lbHide', false)); Sound.play('click'); renderProfile(); return; }
+    if (e.target.closest('[data-copyid]')) { try { navigator.clipboard.writeText(Online.me || ''); } catch (e2) { } api.toast('ID скопирован'); return; }
     if (e.target.closest('[data-glogin]')) { Sound.play('click'); googleLogin(); return; }
     if (e.target.closest('[data-glogout]')) { Sound.play('click'); googleLogout(); return; }
     var lbz = e.target.closest('[data-lbd]');
