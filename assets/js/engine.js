@@ -882,7 +882,10 @@
       tag.style.background = DIFF_COL[dd];
       card.querySelector('.mdl').textContent = MEDAL_IC[medal(id)];
       card.classList.toggle('isfav', isFav(id));
-      card.classList.toggle('locked', isLocked(id)); card.setAttribute('data-price', isLocked(id) ? '🔒 ' + LOCKED[id] : '');
+      card.classList.toggle('locked', isLocked(id));
+      var lb = card.querySelector('.lockb');
+      if (isLocked(id)) { if (!lb) { lb = document.createElement('span'); lb.className = 'lockb'; card.appendChild(lb); } lb.textContent = '🔒 ' + LOCKED[id]; }
+      else if (lb) lb.remove();
     });
     $('#total').textContent = t('menu.stats', plays, played, ORDER.length);
     $('#rndTxt').textContent = t('menu.random');
@@ -1046,7 +1049,8 @@
     else if (menuSort === 'az') ids.sort(function (a, b) { return String(gt(a, 'title')).localeCompare(String(gt(b, 'title'))); });
     else if (menuSort === 'new') ids.sort(function (a, b) { var A = GAMES[a], B = GAMES[b]; return (B.isNew4 ? 3 : B.isNew3 ? 2 : B.isNew2 ? 1 : 0) - (A.isNew4 ? 3 : A.isNew3 ? 2 : A.isNew2 ? 1 : 0); });
     else if (menuSort === 'medal') ids.sort(function (a, b) { return medal(b) - medal(a); });
-    return ids;
+    // закрытые игры всегда в конце списка (сортировка стабильная, порядок внутри групп сохраняется)
+    return ids.filter(function (id) { return !isLocked(id); }).concat(ids.filter(isLocked));
   }
   function applySort() {
     var box = $('#cards');
