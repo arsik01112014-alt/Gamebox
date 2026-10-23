@@ -1415,8 +1415,9 @@
     if (e.target.closest('[data-glogout]')) { Sound.play('click'); googleLogout(); return; }
     var lbz = e.target.closest('[data-lbd]');
     if (lbz) { openLb(App.id, +lbz.getAttribute('data-lbd')); return; }
+    // data-skin стоит и на корне страницы: без проверки любой тап в окне считался выбором скина и открывал настройки
     var skz = e.target.closest('[data-skin]');
-    if (skz) { store.set('skin', skz.getAttribute('data-skin')); applySkin(); Sound.play('rotate'); renderSettings(); return; }
+    if (skz && sheet.contains(skz)) { store.set('skin', skz.getAttribute('data-skin')); applySkin(); Sound.play('rotate'); renderSettings(); return; }
     if (qz) { Gfx.quality = +qz.getAttribute('data-q'); store.set('quality', Gfx.quality); sizeBg(); Sound.play('click'); renderSettings(); return; }
     if (l) { I18N.set(l.getAttribute('data-lang')); Sound.play('click'); renderSettings(); applyStaticTexts(); return; }
     if (!s) return;
