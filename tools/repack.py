@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # Пересобирает APK: состав, порядок и сжатие записей исходного APK сохраняются.
 # Меняются только файлы assets/ (берутся из папки) и AndroidManifest.xml (если передан).
+# ASSETS_EXCLUSIVE=1 — брать только файлы из папки; RESOURCES_ARSC — подменить resources.arsc.
 # META-INF не копируется: подпись ставит build_apk.sh. Записей-каталогов нет.
 # Использование: repack.py <исходный.apk> <папка assets> <выход.apk> [AndroidManifest.xml]
 import os, sys, zipfile
@@ -15,6 +16,10 @@ with zipfile.ZipFile(base) as zin, zipfile.ZipFile(out, 'w') as zout:
             continue
         if n.startswith('assets/') and os.path.isfile(os.path.join(assets_dir, n[len('assets/'):])):
             data = open(os.path.join(assets_dir, n[len('assets/'):]), 'rb').read()
+        elif n.startswith('assets/') and os.environ.get('ASSETS_EXCLUSIVE') == '1':
+            continue  # отдельное приложение: файлы игры не нужны
+        elif n == 'resources.arsc' and os.environ.get('RESOURCES_ARSC'):
+            data = open(os.environ['RESOURCES_ARSC'], 'rb').read()
         elif n == 'AndroidManifest.xml' and manifest:
             data = open(manifest, 'rb').read()
         else:

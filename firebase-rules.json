@@ -1,0 +1,35 @@
+{
+  "rules": {
+    "app": {
+      ".read": true
+    },
+    "lb": {
+      ".read": "auth != null",
+      "$board": {
+        ".indexOn": [
+          "s",
+          "n"
+        ],
+        "$uid": {
+          ".write": "auth != null && auth.uid === $uid && !root.child('bans').child(auth.uid).exists() && (!data.exists() || !newData.exists() || newData.child('s').val() >= data.child('s').val())"
+        }
+      }
+    },
+    "rooms": {
+      ".read": "auth != null",
+      ".indexOn": [
+        "g",
+        "pub"
+      ],
+      "$code": {
+        ".write": "auth != null && (auth.uid === 'ADMIN_UID' || !root.child('bans').child(auth.uid).exists())"
+      }
+    },
+    "bans": {
+      ".read": "auth != null",
+      "$uid": {
+        ".write": "auth != null && auth.uid === 'ADMIN_UID'"
+      }
+    }
+  }
+}

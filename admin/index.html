@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>GBAdmin</title>
+<style>
+:root { --bg:#0b1020; --card:#151b2e; --muted:#94a3b8; --txt:#f1f5f9; --acc:#7c5cff; --red:#ef4444; --green:#22c55e; }
+* { box-sizing:border-box; }
+body { margin:0; background:var(--bg); color:var(--txt); font:15px system-ui, sans-serif; }
+header { position:sticky; top:0; z-index:2; display:flex; align-items:center; gap:10px; padding:14px 16px; background:rgba(11,16,32,.95); }
+header h1 { flex:1; margin:0; font-size:18px; }
+button { font:inherit; border:0; border-radius:10px; padding:8px 12px; background:var(--acc); color:#fff; cursor:pointer; }
+button.sec { background:#273049; } button.red { background:var(--red); } button.green { background:var(--green); color:#052e16; }
+nav { display:flex; gap:6px; padding:0 16px 10px; overflow-x:auto; }
+nav button { background:#1e263d; white-space:nowrap; } nav button.on { background:var(--acc); }
+main { padding:0 16px 40px; }
+.stats { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+.stat { background:var(--card); border-radius:14px; padding:14px; }
+.stat b { display:block; font-size:28px; } .stat small { color:var(--muted); }
+.row { display:flex; align-items:center; gap:10px; margin:8px 0; padding:10px 12px; border-radius:12px; background:var(--card); }
+.row .m { flex:1; min-width:0; }
+.row .m b, .row .m small { display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.row small, .note { color:var(--muted); }
+.note { font-size:13px; line-height:1.45; }
+.dot { flex:none; width:8px; height:8px; border-radius:50%; background:#475569; } .dot.on { background:var(--green); }
+.banned { color:#fca5a5; font-weight:700; }
+input { width:100%; margin:4px 0 8px; padding:10px 12px; border-radius:10px; border:1px solid #334155; background:#111827; color:#fff; font:inherit; }
+code, pre { background:#111827; border-radius:8px; word-break:break-all; }
+code { padding:2px 6px; } pre { padding:10px; font-size:11px; white-space:pre-wrap; max-height:260px; overflow:auto; }
+#toast { position:fixed; left:50%; bottom:20px; transform:translateX(-50%); display:none; padding:10px 14px; border-radius:10px; background:#111827; box-shadow:0 4px 20px rgba(0,0,0,.4); }
+</style>
+</head>
+<body>
+<header><h1>🛡️ GameBox — админка</h1><button class="sec" id="refresh">⟳ Обновить</button></header>
+<nav id="tabs"></nav>
+<main id="view"><p class="note">Загрузка…</p></main>
+<div id="toast"></div>
+<script>
+// Админка GameBox: те же Firebase-проект и ключ, что и в игре; вход анонимный, ID админа задаётся в правилах базы
+var FB = { key: 'AIzaSyDglJuu3uT8vIrAsLByo8cqMWywbS1rgxw', db: 'https://gamebox-73da2-default-rtdb.europe-west1.firebasedatabase.app' };
+var ONLINE_MS = 3 * 60 * 1000, ROOM_MS = 45000;
+var TABS = [['home', 'Обзор'], ['players', 'Игроки'], ['rooms', 'Комнаты'], ['top', 'Рейтинг'], ['setup', 'Настройка']];
+var tab = 'home', D = null, me = null, query = '';
+
+function $(s) { return document.querySelector(s); }
+function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return '&#' + c.charCodeAt(0) + ';'; }); }
+function ls(k, v) { try { if (v === undefined) return JSON.parse(localStorage.getItem(k)); localStorage.setItem(k, JSON.stringify(v)); } catch (e) { return null; } }
+function toast(t) { var el = $('#toast'); el.textContent = t; el.style.display = 'block'; clearTimeout(toast.t); toast.t = setTimeout(function () { el.style.display = 'none'; }, 2500); }
+function ago(ts) {
+  if (!ts) return 'не заходил после обновления';
+  var s = Math.round((Date.now() - ts) / 1000);
+  return s < 60 ? 'только что' : s < 3600 ? Math.floor(s / 60) + ' мин назад' : s < 86400 ? Math.floor(s / 3600) + ' ч назад' : new Date(ts).toLocaleDateString('ru-RU');
+}
+function copy(text) {
+  try { navigator.clipboard.writeText(text).then(function () { toast('Скопировано'); }, fallback); } catch (e) { fallback(); }
+  function fallback() { var ta = document.createElement('textarea'); ta.value = text; document.body.appendChild(ta); ta.select(); try { document.execCommand('copy'); toast('Скопировано'); } catch (e2) { toast('Не удалось скопировать'); } ta.remove(); }
+}
+
+// анонимный вход через REST; refresh-токен сохраняет один и тот же ID админа
+function auth() {
+  var a = ls('adm_auth');
+  if (a && a.tok && a.exp > Date.now() + 60000) { me = a.uid; return Promise.resolve(a.tok); }
+  var refresh = a && a.rt;
+  var url = refresh ? 'https://securetoken.googleapis.com/v1/token?key=' + FB.key : 'https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=' + FB.key;
+  var body = refresh ? 'grant_type=refresh_token&refresh_token=' + encodeURIComponent(refresh) : '{"returnSecureToken":true}';
+  var ct = refresh ? 'application/x-www-form-urlencoded' : 'application/json';
+  return fetch(url, { method: 'POST', headers: { 'Content-Type': ct }, body: body }).then(function (r) { return r.json(); }).then(function (j) {
+    var tok = j.idToken || j.id_token, uid = j.localId || j.user_id;
+    if (!tok) throw 'auth';
+    ls('adm_auth', { tok: tok, rt: j.refreshToken || j.refresh_token, uid: uid, exp: Date.now() + (+(j.expiresIn || j.expires_in) || 3600) * 1000 });
+    me = uid; return tok;
+  });
+}
+function req(method, path, body) {
+  return auth().then(function (tok) {
+    var o = { method: method };
+    if (body !== undefined) o.body = JSON.stringify(body);
+    return fetch(FB.db + path + '.json?auth=' + encodeURIComponent(tok), o).then(function (r) { if (!r.ok) throw r.status; return r.json(); });
+  });
+}
+function denied(e) { toast(e === 401 || e === 403 ? 'Нет прав: настрой правила базы (вкладка «Настройка»)' : 'Ошибка: ' + e); }
+
+function load() {
+  var paths = ['/lb/_seen_0', '/lb/_nick_0', '/rooms', '/bans', '/lb/_all_0'];
+  return Promise.all(paths.map(function (p) { return req('GET', p).catch(function (e) { return { __err: e }; }); })).then(function (r) {
+    var seen = r[0] || {}, nick = r[1] || {}, rooms = r[2] || {}, bans = r[3] || {}, top = r[4] || {}, now = Date.now(), P = {};
+    var failed = r.filter(function (x) { return x && x.__err; }).length;
+    function person(u) { return P[u] || (P[u] = { u: u, n: '', a: '', s: 0 }); }
+    if (!seen.__err) Object.keys(seen).forEach(function (u) { var v = seen[u] || {}, p = person(u); p.s = +v.s || 0; p.n = v.n || p.n; p.a = v.a || p.a; });
+    if (!nick.__err) Object.keys(nick).forEach(function (u) { var v = nick[u] || {}, p = person(u); if (v.n) p.n = v.n; p.a = p.a || v.a; });
+    var players = Object.keys(P).map(function (u) { var p = P[u]; p.ban = !bans.__err && !!bans[u]; p.on = now - p.s < ONLINE_MS; return p; })
+      .sort(function (x, y) { return y.s - x.s; });
+    var roomList = rooms.__err ? [] : Object.keys(rooms).map(function (k) {
+      var v = rooms[k] || {}, hb = v.hb || {};
+      return { code: k, g: v.g, h: v.h || {}, c: v.c || null, pub: !!v.pub, last: Math.max(v.t || 0, hb.h || 0, hb.c || 0) };
+    }).sort(function (x, y) { return y.last - x.last; });
+    D = {
+      players: players, rooms: roomList, failed: failed, bansOk: !bans.__err,
+      online: players.filter(function (p) { return p.on; }).length,
+      active: roomList.filter(function (x) { return now - x.last < ROOM_MS; }).length,
+      matches: roomList.filter(function (x) { return x.c && now - x.last < ROOM_MS; }).length,
+      banned: bans.__err ? 0 : Object.keys(bans).length,
+      top: top.__err ? [] : Object.keys(top).map(function (u) { return { u: u, n: top[u].n, a: top[u].a, s: top[u].s }; }).sort(function (x, y) { return y.s - x.s; }).slice(0, 30)
+    };
+  });
+}
+
+function render() {
+  $('#tabs').innerHTML = TABS.map(function (t) { return '<button class="' + (t[0] === tab ? 'on' : '') + '" data-tab="' + t[0] + '">' + t[1] + '</button>'; }).join('');
+  var v = $('#view');
+  if (!D) { v.innerHTML = '<p class="note">Нет связи с сервером. Проверь интернет и нажми «Обновить».</p>'; return; }
+  var warn = D.failed ? '<p class="note">⚠️ Часть данных не загрузилась. Скорее всего, не настроены правила базы: вкладка «Настройка».</p>' : '';
+  if (tab === 'home') {
+    v.innerHTML = warn + '<div class="stats">' +
+      stat(D.online, 'Онлайн сейчас (за 3 мин)') + stat(D.players.length, 'Всего игроков') +
+      stat(D.active, 'Открытых комнат') + stat(D.matches, 'Матчей идёт') +
+      stat(D.banned, 'Забанено') + stat(D.players.filter(function (p) { return Date.now() - p.s < 86400000; }).length, 'Заходили за сутки') +
+      '</div><p class="note">Игрок считается в сети, если игра открыта и отмечалась за последние 3 минуты. Игроки, которые не заходили после обновления, видны только по нику.</p>';
+  } else if (tab === 'players') {
+    v.innerHTML = warn + '<input id="q" placeholder="Поиск по нику или ID" value="' + esc(query) + '"><div id="plist"></div>';
+    renderPlayers();
+  } else if (tab === 'rooms') {
+    v.innerHTML = warn + (D.rooms.length ? D.rooms.map(function (r) {
+      var live = Date.now() - r.last < ROOM_MS;
+      return '<div class="row"><span class="dot' + (live ? ' on' : '') + '"></span><div class="m"><b>' + esc(r.g || '?') + ' · ' + esc(r.code) + (r.pub ? '' : ' · приватная') + '</b>' +
+        '<small>' + esc((r.h.a || '') + ' ' + (r.h.n || '?')) + (r.c ? ' vs ' + esc((r.c.a || '') + ' ' + (r.c.n || '?')) : ' · ждёт соперника') + ' · ' + ago(r.last) + '</small></div>' +
+        '<button class="red" data-act="close" data-id="' + esc(r.code) + '">Закрыть</button></div>';
+    }).join('') : '<p class="note">Комнат нет.</p>');
+  } else if (tab === 'top') {
+    v.innerHTML = warn + (D.top.length ? D.top.map(function (p, i) {
+      return '<div class="row"><b>' + (i + 1) + '</b><div class="m"><b>' + esc((p.a || '') + ' ' + (p.n || '?')) + '</b><small>ID ' + esc(p.u.slice(0, 10)) + '</small></div><b>' + esc(p.s) + '</b></div>';
+    }).join('') : '<p class="note">Рейтинг пуст.</p>');
+  } else {
+    var rules = RULES.split('ADMIN_UID').join(me || 'ADMIN_UID');
+    v.innerHTML = '<p>Твой ID админа:</p><p><code>' + esc(me || 'нет связи') + '</code> <button class="sec" data-act="copy-id">Копировать</button></p>' +
+      '<p class="note">Чтобы банить игроков, нужны правила базы, где этот ID указан как админ. Без них забанить может кто угодно, поэтому без правил бан не сработает.</p>' +
+      '<ol class="note"><li>Открой console.firebase.google.com → проект gamebox-73da2 → Realtime Database → вкладка «Правила» (Rules).</li>' +
+      '<li>Нажми «Копировать правила» ниже и замени ими всё содержимое.</li><li>Нажми «Опубликовать» (Publish).</li></ol>' +
+      '<button data-act="copy-rules">Копировать правила</button><pre>' + esc(rules) + '</pre>' +
+      '<p class="note">ID сохраняется, пока не удалишь приложение или его данные. Если ID сменился, повтори шаги с новым ID.</p>';
+  }
+}
+function stat(n, label) { return '<div class="stat"><b>' + n + '</b><small>' + label + '</small></div>'; }
+function renderPlayers() {
+  var ql = query.trim().toLowerCase();
+  var list = D.players.filter(function (p) { return !ql || String(p.n).toLowerCase().indexOf(ql) >= 0 || p.u.toLowerCase().indexOf(ql) >= 0; });
+  $('#plist').innerHTML = '<p class="note">Показано ' + Math.min(list.length, 200) + ' из ' + list.length + '</p>' + list.slice(0, 200).map(function (p) {
+    return '<div class="row"><span class="dot' + (p.on ? ' on' : '') + '"></span><div class="m"><b>' + esc((p.a || '') + ' ' + (p.n || 'без ника')) + (p.ban ? ' <span class="banned">· БАН</span>' : '') + '</b>' +
+      '<small>ID ' + esc(p.u.slice(0, 10)) + ' · ' + (p.on ? 'в сети' : ago(p.s)) + '</small></div>' +
+      (p.ban ? '<button class="green" data-act="unban" data-id="' + esc(p.u) + '">Разбан</button>' : '<button class="red" data-act="ban" data-id="' + esc(p.u) + '" data-n="' + esc(p.n) + '">Бан</button>') + '</div>';
+  }).join('');
+}
+
+function refresh() { return load().catch(function () { D = null; }).then(render); }
+$('#refresh').addEventListener('click', function () { toast('Обновляю…'); refresh(); });
+$('#tabs').addEventListener('click', function (e) { var b = e.target.closest('[data-tab]'); if (b) { tab = b.getAttribute('data-tab'); render(); } });
+$('#view').addEventListener('input', function (e) { if (e.target.id === 'q') { query = e.target.value; renderPlayers(); } });
+$('#view').addEventListener('click', function (e) {
+  var b = e.target.closest('[data-act]'); if (!b) return;
+  var act = b.getAttribute('data-act'), id = b.getAttribute('data-id');
+  if (act === 'copy-id') copy(me || '');
+  else if (act === 'copy-rules') copy(RULES.split('ADMIN_UID').join(me || 'ADMIN_UID'));
+  else if (act === 'ban') req('PUT', '/bans/' + id, { t: { '.sv': 'timestamp' }, n: b.getAttribute('data-n') || '' }).then(function () { toast('Игрок забанен'); refresh(); }, denied);
+  else if (act === 'unban') req('DELETE', '/bans/' + id).then(function () { toast('Бан снят'); refresh(); }, denied);
+  else if (act === 'close') req('DELETE', '/rooms/' + id).then(function () { toast('Комната закрыта'); refresh(); }, denied);
+});
+
+// правила базы: игра пишет только свои записи, забаненные не пишут ничего, банить может только админ
+var RULES = JSON.stringify({ rules: {
+  app: { '.read': true },
+  lb: { '.read': 'auth != null', '$board': { '.indexOn': ['s', 'n'], '$uid': {
+    '.write': "auth != null && auth.uid === $uid && !root.child('bans').child(auth.uid).exists() && (!data.exists() || !newData.exists() || newData.child('s').val() >= data.child('s').val())" } } },
+  rooms: { '.read': 'auth != null', '.indexOn': ['g', 'pub'], '$code': { '.write': "auth != null && (auth.uid === 'ADMIN_UID' || !root.child('bans').child(auth.uid).exists())" } },
+  bans: { '.read': 'auth != null', '$uid': { '.write': "auth != null && auth.uid === 'ADMIN_UID'" } }
+} }, null, 2);
+
+refresh();
+setInterval(function () { if (!document.hidden) refresh(); }, 15000);
+</script>
+</body>
+</html>

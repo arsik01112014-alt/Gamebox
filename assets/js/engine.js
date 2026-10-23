@@ -1341,6 +1341,26 @@
     if (b.getAttribute('data-acct') === 'guest') acctGuest(); else googleLogin();
   });
   if (!store.get('acct', null)) acctShow();
+  /* ---------- «в сети» для админки и бан ---------- */
+  // присутствие пишется как рекорд-время в lb/_seen_0/{uid}: s только растёт, поэтому подходят правила рейтинга
+  function beatPresence() {
+    if (document.hidden || !Online.ok()) return;
+    Online.auth(function (tok) {
+      if (!tok) return;
+      Online.req('PUT', '/lb/_seen_0/' + Online.me, function () { return { s: { '.sv': 'timestamp' }, n: deviceName().slice(0, 16), a: avatar(), t: { '.sv': 'timestamp' } }; });
+      Online.req('GET', '/bans/' + Online.me, undefined, function (e, v) { setBanned(!e && !!v); });
+    });
+  }
+  function setBanned(on) {
+    var el = document.getElementById('banned');
+    if (!on) { if (el) el.remove(); return; }
+    if (el) return;
+    el = document.createElement('div'); el.id = 'banned';
+    el.innerHTML = '<div class="acct-card"><h3>🚫 Вы заблокированы</h3><p>Администратор заблокировал этот аккаунт.</p></div>';
+    document.body.appendChild(el);
+  }
+  setTimeout(beatPresence, 3000); setInterval(beatPresence, 60000);
+  document.addEventListener('visibilitychange', function () { if (!document.hidden) beatPresence(); });
   /* ---------- активные онлайн-матчи под заданиями дня ---------- */
   function renderLive(list) {
     var box = $('#live');
