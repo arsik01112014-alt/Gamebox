@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>GameBox</title>
+<link rel="stylesheet" href="css/glass.css" id="baseCss">
+<link rel="stylesheet" id="skinCss" disabled>
+<link rel="stylesheet" href="css/skins-ui.css">
+<script>/* стиль интерфейса — до отрисовки, чтобы не мигало */(function(){try{var k=JSON.parse(localStorage.getItem("skin")||'"glass"');var S={glass:["css/glass.css"],minimal:["css/style.css","css/skin-minimal.css"]}[k]||["css/glass.css"];document.getElementById("baseCss").href=S[0];var o=document.getElementById("skinCss");if(S[1]){o.href=S[1];o.disabled=false;}document.documentElement.setAttribute("data-skin",k);}catch(e){}})();</script>
+</head>
+<body>
+<canvas id="bg"></canvas>
+
+<section id="menu" class="screen active">
+  <header class="top">
+    <div class="logo">
+      <svg width="46" height="46" viewBox="0 0 108 108"><defs><clipPath id="lg_r"><rect x="4" y="4" width="100" height="100" rx="24"/></clipPath></defs><g clip-path="url(#lg_r)"><defs><linearGradient id="lg_g1" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#22d3ee"/><stop offset=".45" stop-color="#2563eb"/><stop offset="1" stop-color="#4c1d95"/></linearGradient><radialGradient id="lg_g2" cx=".3" cy=".2" r=".75"><stop offset="0" stop-color="#fff" stop-opacity=".35"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient><radialGradient id="lg_g3" cx=".5" cy=".62" r=".42"><stop offset="0" stop-color="#f97316" stop-opacity=".55"/><stop offset="1" stop-color="#f97316" stop-opacity="0"/></radialGradient></defs><rect width="108" height="108" fill="url(#lg_g1)"/><g stroke="#fff" stroke-opacity=".09" stroke-width=".8"><path d="M0 78 H108 M0 88 H108 M0 99 H108"/><path d="M54 70 L54 108 M54 70 L20 108 M54 70 L88 108 M54 70 L-10 108 M54 70 L118 108"/></g><rect width="108" height="108" fill="url(#lg_g3)"/><rect width="108" height="108" fill="url(#lg_g2)"/></g><g transform="translate(54 54) scale(1.22) translate(-54 -54)"><defs><radialGradient id="lg_ball" cx=".35" cy=".3" r=".75"><stop offset="0" stop-color="#fde68a"/><stop offset=".35" stop-color="#fb923c"/><stop offset="1" stop-color="#dc2626"/></radialGradient><linearGradient id="lg_base" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#c7d2fe"/></linearGradient><linearGradient id="lg_side" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6366f1"/><stop offset="1" stop-color="#312e81"/></linearGradient><linearGradient id="lg_stick" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#94a3b8"/><stop offset=".5" stop-color="#f1f5f9"/><stop offset="1" stop-color="#64748b"/></linearGradient></defs><ellipse cx="54" cy="80" rx="27" ry="5" fill="#000" opacity=".25"/><path d="M27 66 Q27 60 33 60 H75 Q81 60 81 66 V72 Q81 78 75 78 H33 Q27 78 27 72 Z" fill="url(#lg_side)"/><path d="M27 64 Q27 58 33 58 H75 Q81 58 81 64 V67 Q81 72 75 72 H33 Q27 72 27 67 Z" fill="url(#lg_base)"/><ellipse cx="67" cy="64.6" rx="4.2" ry="2.6" fill="#16a34a"/><ellipse cx="67" cy="63.6" rx="4.2" ry="2.6" fill="#4ade80"/><ellipse cx="76" cy="64.6" rx="3.2" ry="2.1" fill="#ca8a04"/><ellipse cx="76" cy="63.7" rx="3.2" ry="2.1" fill="#facc15"/><ellipse cx="44" cy="65" rx="7.5" ry="3.2" fill="#1e1b4b" opacity=".85"/><path d="M41.6 64.5 L45 39 L49 39.6 L46.4 64.8 Z" fill="url(#lg_stick)"/><circle cx="47.5" cy="34" r="12" fill="url(#lg_ball)"/><ellipse cx="43.5" cy="29" rx="4.6" ry="3" fill="#fff" opacity=".75" transform="rotate(-28 43.5 29)"/><g fill="#fff"><path d="M72 30 l1.8 4.6 4.6 1.8 -4.6 1.8 -1.8 4.6 -1.8 -4.6 -4.6 -1.8 4.6 -1.8z"/><path d="M64 21 l1 2.4 2.4 1 -2.4 1 -1 2.4 -1 -2.4 -2.4 -1 2.4 -1z" opacity=".85"/><circle cx="31" cy="44" r="1.6" opacity=".8"/><circle cx="78" cy="47" r="1.2" opacity=".7"/></g></g></svg>
+    </div>
+    <div class="tt"><h1 id="appTitle">GAMEBOX</h1><p class="tag" id="appTag"></p></div>
+    <button id="coinBtn" class="coinb" aria-label="Shop"><span class="coin"></span><b id="coinN">0</b></button>
+    <button id="topSet" class="icon-btn" aria-label="Settings"><svg viewBox="0 0 24 24" width="22" height="22"><path d="M19.4 13a7.5 7.5 0 0 0 0-2l2-1.6-2-3.4-2.4 1a7 7 0 0 0-1.7-1L15 3.5h-4l-.4 2.5a7 7 0 0 0-1.7 1l-2.4-1-2 3.4L6.6 11a7.5 7.5 0 0 0 0 2l-2 1.6 2 3.4 2.4-1a7 7 0 0 0 1.7 1l.3 2.5h4l.4-2.5a7 7 0 0 0 1.7-1l2.4 1 2-3.4zM13 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7z" fill="#fff" transform="translate(-1 0)"/></svg></button>
+  </header>
+  <button class="prof" id="prof"><span class="lv"><em id="avEm">😀</em><b id="lvN">1</b></span><span class="pinfo"><span class="pt"><b id="lvRank"></b><small id="lvXp"></small></span><span class="bar"><i id="lvBar"></i></span></span><span class="mdsum" id="mdSum"></span></button>
+  <div class="hero"><h2 id="hello"></h2><div class="hr"><button class="stat rnd" id="rnd"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="4" fill="none" stroke="currentColor" stroke-width="2.4"/><circle cx="8.5" cy="8.5" r="1.7" fill="currentColor"/><circle cx="15.5" cy="15.5" r="1.7" fill="currentColor"/><circle cx="12" cy="12" r="1.7" fill="currentColor"/></svg><span id="rndTxt"></span></button><button class="stat rnd" id="sortBtn">⇅ <span id="sortTxt"></span></button><div class="stat" id="total"></div></div></div>
+  <div class="daily" id="daily"></div>
+  <div class="live" id="live"></div>
+  <div class="filters">
+    <label class="search"><svg viewBox="0 0 24 24" width="18" height="18"><circle cx="10.5" cy="10.5" r="6.5" fill="none" stroke="currentColor" stroke-width="2.4"/><path d="M15.5 15.5L21 21" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg><input id="search" type="search" autocomplete="off" spellcheck="false"><button id="searchX" type="button" aria-label="×">×</button></label>
+    <div class="tabs" id="tabs"></div>
+  </div>
+  <div class="recent" id="recentWrap"><div class="rh" id="recentLbl"></div><div class="rlist" id="recent"></div></div>
+  <div class="cards" id="cards"></div>
+  <div class="empty" id="empty"></div>
+  <footer class="menu-foot">
+    <button id="setBtn" class="pill"><svg class="pi" viewBox="0 0 24 24"><path d="M19.4 13a7.5 7.5 0 0 0 0-2l2-1.6-2-3.4-2.4 1a7 7 0 0 0-1.7-1L15 3.5h-4l-.4 2.5a7 7 0 0 0-1.7 1l-2.4-1-2 3.4L6.6 11a7.5 7.5 0 0 0 0 2l-2 1.6 2 3.4 2.4-1a7 7 0 0 0 1.7 1l.3 2.5h4l.4-2.5a7 7 0 0 0 1.7-1l2.4 1 2-3.4zM13 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7z" fill="#fff" transform="translate(-1 0)"/></svg><span id="setBtnTxt"></span></button>
+    <button id="langBtn" class="pill"><svg class="pi" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="#fff" stroke-width="2"/><path d="M3 12h18M12 3c3 3.2 3 14.8 0 18M12 3c-3 3.2-3 14.8 0 18" fill="none" stroke="#fff" stroke-width="1.8"/></svg><span id="langBtnTxt"></span></button>
+  </footer>
+</section>
+
+<div id="settings" class="sheet"><div class="sheet-card" id="setBody"></div></div>
+
+<section id="game" class="screen">
+  <div class="hud">
+    <button class="icon-btn" id="backBtn" aria-label="Назад">
+      <svg viewBox="0 0 24 24" width="22" height="22"><path d="M15 5l-7 7 7 7" fill="none" stroke="#fff" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+    <div class="hud-mid">
+      <div class="hud-title" id="gTitle"></div>
+      <div class="hud-score" id="gScore">0</div>
+    </div>
+    <div class="hud-best"><span id="bestLbl">РЕКОРД</span><b id="gBest">0</b></div>
+    <button class="icon-btn" id="pauseBtn" aria-label="Пауза">
+      <svg viewBox="0 0 24 24" width="22" height="22"><rect x="6" y="5" width="4" height="14" rx="1.5" fill="#fff"/><rect x="14" y="5" width="4" height="14" rx="1.5" fill="#fff"/></svg>
+    </button>
+  </div>
+  <div class="stage" id="stage">
+    <canvas id="cv"></canvas>
+    <canvas id="fxc"></canvas>
+    <div class="cd" id="cd"></div>
+    <div class="fps" id="fpsMeter"></div>
+    <div class="overlay" id="overlay"><div class="panel" id="panel"></div></div>
+  </div>
+  <div class="controls" id="controls"></div>
+</section>
+
+<script src="js/lang/kk.js"></script>
+<script src="js/lang/tr.js"></script>
+<script src="js/lang/fr.js"></script>
+<script src="js/lang/it.js"></script>
+<script src="js/lang/pt.js"></script>
+<script src="js/lang/pl.js"></script>
+<script src="js/i18n-games2.js"></script>
+<script src="js/lang/more-kk.js"></script>
+<script src="js/lang/more-tr.js"></script>
+<script src="js/lang/more-fr.js"></script>
+<script src="js/lang/more-it.js"></script>
+<script src="js/lang/more-pt.js"></script>
+<script src="js/lang/more-pl.js"></script>
+<script src="js/i18n-v15.js"></script>
+<script src="js/i18n-v16.js"></script>
+<script src="js/i18n-v17.js"></script>
+<script src="js/i18n-v20.js"></script>
+<script src="js/i18n-games20.js"></script>
+<script src="js/i18n-improve20.js"></script>
+<script src="js/i18n-v21.js"></script>
+<script src="js/i18n-v23.js"></script>
+<script src="js/i18n-v24.js"></script>
+<script src="js/i18n-v26.js"></script>
+<script src="js/i18n-v24-P.js"></script>
+<script src="js/i18n-v24-Q.js"></script>
+<script src="js/i18n-v24-R.js"></script>
+<script src="js/i18n-v24-S.js"></script>
+<script src="js/i18n-v24-T.js"></script>
+<script src="js/i18n-v25-U.js"></script>
+<script src="js/i18n-v25-V.js"></script>
+<script src="js/i18n-v25-W.js"></script>
+<script src="js/i18n-v27.js"></script>
+<script src="js/i18n.js"></script>
+<script src="js/snake.js"></script>
+<script src="js/flappy.js"></script>
+<script src="js/mario.js"></script>
+<script src="js/tetris.js"></script>
+<script src="js/g2048.js"></script>
+<script src="js/breakout.js"></script>
+<script src="js/space.js"></script>
+<script src="js/dino.js"></script>
+<script src="js/mines.js"></script>
+<script src="js/pacman.js"></script>
+<script src="js/match3.js"></script>
+<script src="js/pong.js"></script>
+<script src="js/chess.js"></script>
+<script src="js/checkers.js"></script>
+<script src="js/nardy.js"></script>
+<script src="js/billiards.js"></script>
+<script src="js/battleship.js"></script>
+<script src="js/ttt.js"></script>
+<script src="js/sudoku.js"></script>
+<script src="js/darts.js"></script>
+<script src="js/tug.js"></script>
+<script src="js/slither.js"></script>
+<script src="js/tanks.js"></script>
+<script src="js/stack.js"></script>
+<script src="js/jumper.js"></script>
+<script src="js/memory.js"></script>
+<script src="js/mole.js"></script>
+<script src="js/simon.js"></script>
+<script src="js/asteroids.js"></script>
+<script src="js/crossy.js"></script>
+<script src="js/fruit.js"></script>
+<script src="js/knife.js"></script>
+<script src="js/tiles.js"></script>
+<script src="js/bubbles.js"></script>
+<script src="js/connect4.js"></script>
+<script src="js/reversi.js"></script>
+<script src="js/puzzle15.js"></script>
+<script src="js/blocks.js"></script>
+<script src="js/colorjump.js"></script>
+<script src="js/airhockey.js"></script>
+<script src="js/racing.js"></script>
+<script src="js/archery.js"></script>
+<script src="js/basket.js"></script>
+<script src="js/maze.js"></script>
+<script src="js/solitaire.js"></script>
+<script src="js/yahtzee.js"></script>
+<script src="js/sokoban.js"></script>
+<script src="js/watersort.js"></script>
+<script src="js/mahjong.js"></script>
+<script src="js/gomoku.js"></script>
+<script src="js/dots.js"></script>
+<script src="js/bowling.js"></script>
+<script src="js/minigolf.js"></script>
+<script src="js/pinball.js"></script>
+<script src="js/penalty.js"></script>
+<script src="js/towerdef.js"></script>
+<script src="js/numbers.js"></script>
+<script src="js/reflex.js"></script>
+<script src="js/dodge.js"></script>
+<script src="js/lights.js"></script>
+<script src="js/flood.js"></script>
+<script src="js/hangman.js"></script>
+<script src="js/nim.js"></script>
+<script src="js/blackjack.js"></script>
+<script src="js/guess.js"></script>
+<script src="js/bulls.js"></script>
+<script src="js/wordle.js"></script>
+<script src="js/lines.js"></script>
+<script src="js/engine.js"></script>
+</body>
+</html>
