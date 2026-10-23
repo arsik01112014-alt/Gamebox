@@ -26,6 +26,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/configure-pages@v5
+      # номер версии в ссылках на js/css: иначе браузер показывает старые файлы из кэша
+      - name: Cache busting
+        run: sed -i -E "s#(src|href)=\"((js|css)/[^\"?]+)\"#\1=\"\2?v=${GITHUB_SHA::8}\"#g" assets/index.html
       - uses: actions/upload-pages-artifact@v3
         with:
           path: assets
