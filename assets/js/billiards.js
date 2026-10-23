@@ -237,7 +237,7 @@ window.GAMES.billiards = {
       if (scratch) foul = true;
       if (eight) {
         var cleared = myG && remaining(myG) === 0;
-        winner = cleared && !scratch ? me : 1 - me;
+        winner = cleared && !foul ? me : 1 - me; // восьмёрка с любым фолом (а не только с битком в лузе) — поражение
         phase = 'over'; endT = 2.8; finish();
         if (api.mode === 2) sendRes(foul, false);
         return;
