@@ -13,8 +13,9 @@ window.GAMES.blockblast = {
       [[0, 0], [0, 1], [0, 2], [0, 3]], [[0, 0], [1, 0], [2, 0], [3, 0]], [[0, 0], [1, 0], [2, 0], [2, 1]],
       [[0, 0], [0, 1], [0, 2], [1, 1]], [[0, 0], [0, 1], [0, 2], [1, 0], [1, 1], [1, 2], [2, 0], [2, 1], [2, 2]],
       [[0, 0], [0, 1], [0, 2], [0, 3], [0, 4]], [[0, 0], [1, 0], [2, 0], [3, 0], [4, 0]]];
-    var grid, tray, sel, cs, gx, gy, ty;
-    function layout() { cs = Math.floor(Math.min(api.W - 24, api.H * 0.55) / N); gx = (api.W - cs * N) / 2; gy = 70; ty = gy + cs * N + 24; }
+    var grid, tray, sel, cs, gx, gy, ty, th;
+    // высота лотка с фигурами — по оставшемуся месту: на широком экране треть ширины не помещается по высоте
+    function layout() { cs = Math.floor(Math.min(api.W - 24, api.H * 0.55) / N); gx = (api.W - cs * N) / 2; gy = 70; ty = gy + cs * N + 24; th = Math.max(60, Math.min(api.W / 3, api.H - ty - 8)); }
     function piece() { var pool = [8, 11, 13, 15][api.diff]; return { sh: SH[Math.floor(Math.random() * pool)], col: PAL[Math.floor(Math.random() * PAL.length)] }; }
     function refill() { tray = [piece(), piece(), piece()]; sel = -1; }
     function fits(sh, r, c) { return sh.every(function (p) { var y = r + p[0], x = c + p[1]; return y >= 0 && x >= 0 && y < N && x < N && !grid[y * N + x]; }); }
@@ -32,7 +33,7 @@ window.GAMES.blockblast = {
       cols.forEach(function (c) { for (j = 0; j < N; j++) grid[j * N + c] = null; });
       return rows.length + cols.length;
     }
-    function slotAt(x, y) { return y >= ty && y <= ty + api.W / 3 ? Math.min(2, Math.floor(x / (api.W / 3))) : -1; }
+    function slotAt(x, y) { return y >= ty && y <= ty + th ? Math.min(2, Math.floor(x / (api.W / 3))) : -1; }
     return {
       reset: function () { grid = []; for (var i = 0; i < N * N; i++) grid.push(null); layout(); refill(); },
       resize: function () { layout(); }, idle: function () { }, update: function () { }, key: function () { },
@@ -62,11 +63,11 @@ window.GAMES.blockblast = {
         }
         var sw = W / 3;
         tray.forEach(function (pc, k) {
-          if (k === sel) { c.fillStyle = 'rgba(250,204,21,.18)'; c.fillRect(k * sw + 4, ty, sw - 8, sw); }
+          if (k === sel) { c.fillStyle = 'rgba(250,204,21,.18)'; c.fillRect(k * sw + 4, ty, sw - 8, th); }
           if (!pc) return;
-          var ts = Math.floor(Math.min(cs * 0.55, (sw - 20) / 5));
+          var ts = Math.floor(Math.min(cs * 0.55, (Math.min(sw, th) - 20) / 5));
           var w = 1 + Math.max.apply(null, pc.sh.map(function (p) { return p[1]; })), h = 1 + Math.max.apply(null, pc.sh.map(function (p) { return p[0]; }));
-          var ox = k * sw + (sw - w * ts) / 2, oy = ty + (sw - h * ts) / 2;
+          var ox = k * sw + (sw - w * ts) / 2, oy = ty + (th - h * ts) / 2;
           c.fillStyle = pc.col;
           pc.sh.forEach(function (p) { c.fillRect(ox + p[1] * ts + 1, oy + p[0] * ts + 1, ts - 2, ts - 2); });
         });
