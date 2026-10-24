@@ -357,5 +357,3 @@ html .skb.on { border-color:var(--ink); background:var(--card); box-shadow:inset
   .top h1 { font-size:17px; letter-spacing:.1em; } .hero h2 { font-size:29px; }
   .cards { gap:10px; } .card .lbl { padding:6px 13px 13px; } .card .ic { left:13px; } .card::before { left:13px; } .card .num { right:13px; }
 }
-.avb .avi{width:40px!important;height:40px!important;vertical-align:middle!important}
-#avEm .avi{width:100%!important;height:100%!important;vertical-align:top!important}

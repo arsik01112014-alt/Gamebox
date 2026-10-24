@@ -6,6 +6,7 @@
 <title>GameBox</title>
 <link rel="stylesheet" href="css/glass.css" id="baseCss">
 <link rel="stylesheet" id="skinCss" disabled>
+<link rel="stylesheet" href="css/common.css">
 <link rel="stylesheet" href="css/skins-ui.css">
 <script>/* стиль интерфейса — до отрисовки, чтобы не мигало */(function(){try{var k=JSON.parse(localStorage.getItem("skin")||'"glass"');var S={glass:["css/glass.css"],minimal:["css/style.css","css/skin-minimal.css"]}[k]||["css/glass.css"];document.getElementById("baseCss").href=S[0];var o=document.getElementById("skinCss");if(S[1]){o.href=S[1];o.disabled=false;}document.documentElement.setAttribute("data-skin",k);}catch(e){}})();</script>
 </head>

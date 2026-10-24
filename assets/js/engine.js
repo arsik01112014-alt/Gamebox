@@ -402,6 +402,40 @@
     ['brain', '🧠', 150, function (S) { return S.flags.brain; }], ['tasks', '✅', 100, function (S) { return S.flags.tasks; }],
     ['shop', '🛍️', 30, function (S) { return S.flags.bought; }], ['rich', '💰', 0, function (S) { return S.coins >= 1000; }]
   ];
+  // описание достижения и прогресс: [текст, ключ статистики, нужно]
+  var ACH_INFO = {
+    first: ['Сыграй свою первую партию в любой игре', 'plays', 1], p10: ['Сыграй 10 партий', 'plays', 10], p50: ['Сыграй 50 партий', 'plays', 50], p200: ['Сыграй 200 партий', 'plays', 200],
+    l5: ['Дойди до 5 уровня — опыт даётся за каждую партию', 'lvl', 5], l10: ['Дойди до 10 уровня', 'lvl', 10], l20: ['Дойди до 20 уровня', 'lvl', 20],
+    g1: ['Получи золотую медаль в любой игре', 'gold', 1], g10: ['Получи золото в 10 разных играх', 'gold', 10], g30: ['Получи золото в 30 разных играх', 'gold', 30],
+    m30: ['Собери 30 медалей (бронза — 1, серебро — 2, золото — 3)', 'medals', 30],
+    half: ['Сыграй в половину всех игр', 'distinct', function () { return Math.floor(ORDER.length / 2); }], all: ['Сыграй в каждую игру хотя бы раз', 'distinct', function () { return ORDER.length; }],
+    d1: ['Выполни задание дня', 'daily', 1], d7: ['Выполняй задание дня 7 дней подряд', 'streak', 7], rec10: ['Побей свой рекорд 10 раз', 'recs', 10],
+    h1: ['Проведи в играх 1 час', 'time', 3600], fav: ['Добавь 3 игры в избранное (сердечко на карточке)', 'favs', 3],
+    insane: ['Сыграй на сложности «Безумно»', 'flags', 'insane'], owl: ['Сыграй ночью, с 0:00 до 5:00', 'flags', 'owl'],
+    brain: ['Набери 1000 очков в шахматах, шашках, реверси, 4 в ряд или нардах на сложности «Сложно» и выше', 'flags', 'brain'],
+    tasks: ['Выполни все три задания за один день', 'flags', 'tasks'], shop: ['Купи что-нибудь в магазине', 'flags', 'bought'], rich: ['Накопи 1000 монет', 'coins', 1000]
+  };
+  function openAch(k) {
+    var a = ACH.filter(function (x) { return x[0] === k; })[0], I = ACH_INFO[k]; if (!a || !I) return;
+    var on = store.get('ach', []).indexOf(k) >= 0, S = sumStats(), prog = '';
+    if (I[1] === 'flags') prog = on || S.flags[I[2]] ? 'Выполнено' : 'Ещё не выполнено';
+    else {
+      var need = typeof I[2] === 'function' ? I[2]() : I[2], cur = Math.min(need, S[I[1]] || 0);
+      if (I[1] === 'time') prog = Math.floor(cur / 60) + ' / ' + need / 60 + ' мин';
+      else prog = cur + ' / ' + need;
+      prog += '<span class="tbar" style="display:block;margin-top:6px"><i style="width:' + Math.round(cur / need * 100) + '%"></i></span>';
+    }
+    var el = document.getElementById('achModal') || document.body.appendChild(Object.assign(document.createElement('div'), { id: 'achModal' }));
+    el.innerHTML = '<div class="acct-card upd-card ach-card"><button class="upd-x" data-achx="1">✕</button><div class="ach-big' + (on ? '' : ' off') + '">' + a[1] + '</div>' +
+      '<h3>' + t('ach.' + k) + '</h3><p>' + I[0] + '</p><p class="ach-st">' + (on ? '✅ Получено' : '🔒 Не получено') + (a[2] ? ' · награда ' + a[2] + ' <span class="coin" style="width:14px;height:14px;vertical-align:-2px"></span>' : '') + '</p>' +
+      '<div class="ach-pr">' + prog + '</div><button class="btn" data-achx="1">Закрыть</button></div>';
+    Sound.play('click');
+  }
+  document.addEventListener('click', function (e) {
+    var x = e.target.closest('[data-achx]'), m = document.getElementById('achModal');
+    if (x || (m && e.target === m)) { if (m) m.remove(); return; }
+    var c = e.target.closest('[data-ach]'); if (c) openAch(c.getAttribute("data-ach"));
+  });
   function setFlag(k) { var fl = store.get('flags', {}); if (!fl[k]) { fl[k] = 1; store.set('flags', fl); } }
   var achQ = [], achBusy = false;
   function checkAch() {
@@ -973,7 +1007,7 @@
     var got = store.get('ach', []);
     var achHtml = '<div class="achs">' + ACH.map(function (a) {
       var on = got.indexOf(a[0]) >= 0;
-      return '<div class="ach ' + (on ? 'on' : 'off') + '"><em>' + a[1] + '</em><small>' + t('ach.' + a[0]) + '</small></div>';
+      return '<div class="ach ' + (on ? 'on' : 'off') + '" data-ach="' + a[0] + '" style="cursor:pointer"><em>' + a[1] + '</em><small>' + t('ach.' + a[0]) + '</small></div>';
     }).join('') + '</div>';
     $('#setBody').innerHTML = '<h3>' + t('prof.title') + '</h3>' +
       '<div class="pname"><button class="av" data-shop="1">' + avH(avatar()) + '</button><input id="pnameIn" maxlength="16"' + (store.get('acct', null) ? ' readonly' : '') + ' value="' + escapeHtml(deviceName()) + '" placeholder="' + t('prof.name') + '"></div>' +
@@ -1220,7 +1254,7 @@
       '<button class="btn" data-set="close">' + t('set.done') + '</button>' +
       '<div class="ver">' + t('set.version') + ' 3.0</div>';
   }
-  var APP_CODE = 33, updInfo = null, updBarHidden = false;
+  var APP_CODE = 34, updInfo = null, updBarHidden = false;
   // обновление APK: в /app/latest лежит {code, name, notes, url}, админка публикует его кнопкой.
   // WebView приложения не умеет скачивать файлы сам, поэтому «Скачать» копирует ссылку для браузера
   function checkUpdate() {
