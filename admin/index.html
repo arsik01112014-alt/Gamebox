@@ -116,14 +116,20 @@ function req(method, path, body) {
 function act(p, okMsg) { return p.then(function () { toast(okMsg); return refresh(); }, function (e) { toast(e === 401 || e === 403 ? 'Нет прав: обнови правила базы (вкладка «Настройка»)' : 'Ошибка: ' + e); }); }
 
 function load() {
-  var paths = ['/lb/_seen_0', '/lb/_nick_0', '/rooms', '/bans', '/lb/_all_0', '/profiles', '/badges', '/ips', '/ipbans'];
+  var paths = ['/lb', '/rooms', '/bans', '/profiles', '/badges', '/ips', '/ipbans'];
   return Promise.all(paths.map(function (p) { return req('GET', p).catch(function (e) { return { __err: e }; }); })).then(function (r) {
     function ok(x) { return x && !x.__err ? x : {}; }
-    var seen = ok(r[0]), nick = ok(r[1]), rooms = ok(r[2]), bans = ok(r[3]), top = ok(r[4]), prof = ok(r[5]), badges = ok(r[6]), ips = ok(r[7]), ipbans = ok(r[8]);
+    var lb = ok(r[0]), seen = lb._seen_0 || {}, nick = lb._nick_0 || {}, top = lb._all_0 || {};
+    var rooms = ok(r[1]), bans = ok(r[2]), prof = ok(r[3]), badges = ok(r[4]), ips = ok(r[5]), ipbans = ok(r[6]);
     var now = Date.now(), P = {};
     function person(u) { return P[u] || (P[u] = { u: u, n: '', a: '', s: 0 }); }
     Object.keys(seen).forEach(function (u) { var v = seen[u] || {}, p = person(u); p.s = Math.max(p.s, +v.s || 0); p.n = v.n || p.n; p.a = v.a || p.a; });
     Object.keys(nick).forEach(function (u) { var v = nick[u] || {}, p = person(u); if (v.n) p.n = v.n; p.a = p.a || v.a; p.nick = true; });
+    // игроки из таблиц рекордов: так видны и гости, игравшие до обновления или в старой версии приложения
+    Object.keys(lb).forEach(function (key) {
+      if (key.charAt(0) === '_') return;
+      Object.keys(lb[key] || {}).forEach(function (u) { var v = lb[key][u] || {}, p = person(u); p.n = p.n || v.n; p.a = p.a || v.a; p.games = (p.games || 0) + 1; });
+    });
     Object.keys(prof).forEach(function (u) { var v = prof[u] || {}, p = person(u); p.pr = v; p.s = Math.max(p.s, +v.t || 0); p.n = p.n || v.n; p.a = v.a || p.a; });
     var players = Object.keys(P).map(function (u) {
       var p = P[u], ip = ips[u] && ips[u].ip;
@@ -136,7 +142,7 @@ function load() {
       return { code: k, g: v.g, h: v.h || {}, c: v.c || null, pub: !!v.pub, last: Math.max(v.t || 0, hb.h || 0, hb.c || 0) };
     }).sort(function (x, y) { return y.last - x.last; });
     D = {
-      players: players, rooms: roomList, failed: r.filter(function (x) { return x && x.__err; }).length, ipsOk: !(r[7] && r[7].__err),
+      players: players, rooms: roomList, failed: r.filter(function (x) { return x && x.__err; }).length, ipsOk: !(r[5] && r[5].__err),
       byId: P, banList: Object.keys(bans).map(function (u) { return { u: u, n: (bans[u] && bans[u].n) || (P[u] && P[u].n) || '' }; }),
       ipBanList: Object.keys(ipbans).map(function (k) { return { k: k, v: ipbans[k] || {} }; }),
       top: Object.keys(top).map(function (u) { return { u: u, n: top[u].n, a: top[u].a, s: top[u].s }; }).sort(function (x, y) { return y.s - x.s; }).slice(0, 30)
@@ -195,7 +201,7 @@ function render() {
 function stat(ic, n, label) { return '<div class="stat"><span class="ic">' + ic + '</span><b>' + n + '</b><small>' + label + '</small></div>'; }
 function playerRow(p) {
   return '<div class="row click" data-uid="' + esc(p.u) + '"><div class="av">' + esc(p.a || '🙂') + '<i class="' + (p.on ? 'on' : '') + '"></i></div>' +
-    '<div class="m"><b>' + esc(p.n || 'без ника') + (p.ty === 'google' ? '<span class="chip g">Google</span>' : '<span class="chip">Гость</span>') +
+    '<div class="m"><b>' + esc(p.n || 'без ника') + (p.ty === 'google' ? '<span class="chip g">Google</span>' : '<span class="chip">Гость</span>') + (!p.pr && !p.s ? '<span class="chip">старая версия</span>' : '') +
     (p.ban || p.ipBan ? '<span class="chip ban">БАН' + (p.ipBan && !p.ban ? ' IP' : '') + '</span>' : '') + '</b>' +
     '<small>' + (p.on ? 'в сети' : ago(p.s)) + ' · ID ' + esc(p.u.slice(0, 8)) + (p.b ? ' · ' + Object.keys(BADGES).filter(function (k) { return p.b[k]; }).map(function (k) { return BADGES[k][0]; }).join('') : '') + '</small></div></div>';
 }
@@ -218,7 +224,7 @@ function openPlayer(uid) {
     '<small>' + (p.ty === 'google' ? 'Вход через Google' : 'Гость') + ' · ' + (p.on ? '🟢 в сети' : ago(p.s)) + '</small><div>' + badgeChips(p.b) + '</div></div></div>' +
     (pr.st ? '<p class="note">«' + esc(pr.st) + '»</p>' : '') +
     '<div class="grid2"><div class="kv"><small>Уровень</small><b>' + (pr.lv || '—') + '</b></div><div class="kv"><small>Медали</small><b>🥇' + (md[0] || 0) + ' 🥈' + (md[1] || 0) + ' 🥉' + (md[2] || 0) + '</b></div>' +
-    '<div class="kv"><small>Партий</small><b>' + (pr.pl || 0) + '</b></div><div class="kv"><small>Играет с</small><b>' + esc(pr.since || '—') + '</b></div>' +
+    '<div class="kv"><small>Партий · таблиц с рекордами</small><b>' + (pr.pl || 0) + ' · ' + (p.games || 0) + '</b></div><div class="kv"><small>Играет с</small><b>' + esc(pr.since || '—') + '</b></div>' +
     '<div class="kv"><small>ID</small><b>' + esc(uid) + '</b></div><div class="kv"><small>IP</small><b>' + esc(p.ip || (D && D.ipsOk ? 'неизвестен' : 'нет доступа')) + '</b></div></div>' +
     '<h2>Значки</h2><div class="badges">' + Object.keys(BADGES).map(function (k) {
       var on = p.b && p.b[k];

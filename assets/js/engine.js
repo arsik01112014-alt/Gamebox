@@ -799,7 +799,7 @@
         if (e) { cb(e, []); return; }
         var l = Object.keys(all || {}).map(function (k) { var r = all[k]; r.u = k; return r; }).sort(function (x, y) { return y.s - x.s; });
         cb(null, l, self.me);
-      }, 'orderBy=%22s%22&limitToLast=20');
+      }, 'orderBy=%22s%22&limitToLast=50');
     },
     // активные матчи: открытые комнаты с публичным доступом и идущие партии
     liveRooms: function (cb) {
@@ -1223,7 +1223,26 @@
   function openOverall() {
     sheet.classList.remove('profile'); renderOverall(null); sheet.classList.add('show');
     submitOverall();
-    setTimeout(function () { Online.top('_all', 0, function (e, rows, me) { if (sheet.classList.contains('show')) renderOverall(rows, me, e); }); }, 700);
+    setTimeout(function () {
+      Online.req('GET', '/lb', undefined, function (e, all) { if (sheet.classList.contains('show')) renderOverall(e ? [] : overallRows(all || {}), Online.me, e); });
+    }, 700);
+  }
+  // общий рейтинг считается по таблицам всех игр: в нём есть все, у кого есть рекорд, включая гостей и игроков старой версии
+  function overallRows(all) {
+    var best = {}, who = {}, pts = {};
+    Object.keys(all).forEach(function (key) {
+      var id = key.slice(0, key.lastIndexOf('_')), board = all[key] || {};
+      if (key.charAt(0) === '_' || !GAMES[id]) return;
+      Object.keys(board).forEach(function (u) {
+        var r = board[u] || {}, m = medalFor(id, +r.s || 0), k = u + '|' + id;
+        if (m > (best[k] || 0)) best[k] = m;
+        if (!who[u] || (r.t || 0) > (who[u].t || 0)) who[u] = r;
+      });
+    });
+    Object.keys(best).forEach(function (k) { var u = k.split('|')[0]; pts[u] = (pts[u] || 0) + best[k]; });
+    return Object.keys(pts).filter(function (u) { return pts[u] > 0; })
+      .map(function (u) { return { u: u, n: who[u].n, a: who[u].a, s: pts[u] }; })
+      .sort(function (x, y) { return y.s - x.s; }).slice(0, 50);
   }
   function renderOverall(rows, me, err) {
     var h = '<h3>🏆 Общий рейтинг</h3><div class="note pnote">Очки за медали: 🥇3 · 🥈2 · 🥉1 по каждой игре</div><div class="plist" style="margin-top:10px">';
