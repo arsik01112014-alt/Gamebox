@@ -22,17 +22,29 @@ window.GAMES.tiles = {
     '<circle cx="21" cy="72" r="9" fill="none" stroke="#818cf8" stroke-width="2.5" opacity=".8"/><path d="M58 50 v-12 l8 -2.5 v12" stroke="#fff" stroke-width="2" fill="none" opacity=".85"/><circle cx="56.5" cy="50.5" r="2.4" fill="#fff" opacity=".85"/><circle cx="64.5" cy="48" r="2.4" fill="#fff" opacity=".85"/></svg>',
 
   create: function (api) {
-    // мелодии (народные/классические — общественное достояние), MIDI-ноты
+    // известные произведения (общественное достояние), MIDI-ноты; 0 — пауза. Первые FREE — бесплатно, остальные за PRICE монет
     var SONGS = [
-      [64, 64, 65, 67, 67, 65, 64, 62, 60, 60, 62, 64, 64, 62, 62, 0, 64, 64, 65, 67, 67, 65, 64, 62, 60, 60, 62, 64, 62, 60, 60, 0,
-        62, 62, 64, 60, 62, 64, 65, 64, 60, 62, 64, 65, 64, 62, 60, 62, 55, 0], // Ода к радости
-      [60, 60, 67, 67, 69, 69, 67, 0, 65, 65, 64, 64, 62, 62, 60, 0, 67, 67, 65, 65, 64, 64, 62, 0, 67, 67, 65, 65, 64, 64, 62, 0,
-        60, 60, 67, 67, 69, 69, 67, 0, 65, 65, 64, 64, 62, 62, 60, 0], // Мерцай, звёздочка
-      [76, 75, 76, 75, 76, 71, 74, 72, 69, 0, 60, 64, 69, 71, 0, 64, 68, 71, 72, 0, 64, 76, 75, 76, 75, 76, 71, 74, 72, 69, 0,
-        60, 64, 69, 71, 0, 64, 72, 71, 69, 0], // К Элизе
-      [67, 64, 64, 65, 62, 62, 60, 62, 64, 65, 67, 67, 67, 0, 67, 64, 64, 65, 62, 62, 60, 64, 67, 67, 60, 0], // Весёлые гуси
-      [62, 67, 67, 69, 67, 66, 64, 64, 64, 69, 69, 71, 69, 67, 66, 62, 62, 71, 71, 72, 71, 69, 67, 64, 62, 62, 64, 69, 66, 67, 0] // Рождественская
+      { n: 'Ода к радости', m: [64, 64, 65, 67, 67, 65, 64, 62, 60, 60, 62, 64, 64, 62, 62, 0, 64, 64, 65, 67, 67, 65, 64, 62, 60, 60, 62, 64, 62, 60, 60, 0,
+        62, 62, 64, 60, 62, 64, 65, 64, 60, 62, 64, 65, 64, 62, 60, 62, 55, 0] },
+      { n: 'К Элизе', m: [76, 75, 76, 75, 76, 71, 74, 72, 69, 0, 60, 64, 69, 71, 0, 64, 68, 71, 72, 0, 64, 76, 75, 76, 75, 76, 71, 74, 72, 69, 0, 60, 64, 69, 71, 0, 64, 72, 71, 69, 0] },
+      { n: 'Тетрис (Коробейники)', m: [76, 71, 72, 74, 72, 71, 69, 69, 72, 76, 74, 72, 71, 72, 74, 76, 72, 69, 69, 0,
+        74, 77, 81, 79, 77, 76, 72, 76, 74, 72, 71, 71, 72, 74, 76, 72, 69, 69, 0] },
+      { n: 'В лесу родилась ёлочка', m: [67, 76, 76, 74, 76, 72, 67, 67, 0, 67, 76, 76, 77, 74, 79, 0, 79, 81, 81, 77, 77, 76, 74, 72, 0, 67, 76, 76, 77, 74, 72, 0] },
+      { n: 'Jingle Bells', m: [64, 64, 64, 0, 64, 64, 64, 0, 64, 67, 60, 62, 64, 0, 65, 65, 65, 65, 65, 64, 64, 64, 64, 62, 62, 64, 62, 67, 0,
+        64, 64, 64, 0, 64, 64, 64, 0, 64, 67, 60, 62, 64, 0, 65, 65, 65, 65, 65, 64, 64, 64, 67, 67, 65, 62, 60, 0] },
+      { n: 'С днём рождения', m: [67, 67, 69, 67, 72, 71, 0, 67, 67, 69, 67, 74, 72, 0, 67, 67, 79, 76, 72, 71, 69, 0, 77, 77, 76, 72, 74, 72, 0] },
+      { n: 'Турецкий марш', m: [71, 69, 68, 69, 72, 0, 74, 72, 71, 72, 76, 0, 77, 76, 75, 76, 83, 81, 80, 81, 83, 81, 80, 81, 84, 0,
+        81, 84, 83, 81, 80, 81, 76, 77, 74, 72, 71, 69, 0] },
+      { n: 'В пещере горного короля', m: [59, 61, 62, 64, 66, 62, 66, 0, 65, 61, 65, 0, 64, 60, 64, 0, 59, 61, 62, 64, 66, 62, 66, 71, 69, 66, 62, 66, 69, 0] },
+      { n: 'Канон Пахельбеля', m: [78, 76, 74, 73, 71, 69, 71, 73, 0, 74, 73, 71, 69, 67, 66, 67, 64, 0, 66, 67, 69, 66, 67, 64, 66, 62, 0] },
+      { n: 'We Wish You a Merry Christmas', m: [62, 67, 67, 69, 67, 66, 64, 64, 64, 69, 69, 71, 69, 67, 66, 62, 62, 71, 71, 72, 71, 69, 67, 64, 62, 62, 64, 69, 66, 67, 0] },
+      { n: 'Мерцай, звёздочка', m: [60, 60, 67, 67, 69, 69, 67, 0, 65, 65, 64, 64, 62, 62, 60, 0, 67, 67, 65, 65, 64, 64, 62, 0, 67, 67, 65, 65, 64, 64, 62, 0,
+        60, 60, 67, 67, 69, 69, 67, 0, 65, 65, 64, 64, 62, 62, 60, 0] },
+      { n: 'Жили у бабуси', m: [67, 64, 64, 65, 62, 62, 60, 62, 64, 65, 67, 67, 67, 0, 67, 64, 64, 65, 62, 62, 60, 64, 67, 67, 60, 0] }
     ];
+    var FREE = 3, PRICE = 350, buyT = 0;
+    function owned(i) { return i < FREE || api.store.get('pianoOwned', []).indexOf(i) >= 0; }
+    function barY() { return 52; }
     var DIFF = [{ sp: 1.6, acc: 0.012, miss: 3 }, { sp: 2.1, acc: 0.016, miss: 1 }, { sp: 2.7, acc: 0.02, miss: 1 }, { sp: 3.4, acc: 0.024, miss: 1 }];
     var D, rows, speed, scroll, nextRow, song, noteI, t, deadT, missLeft, flashCol, flashRow, flashT, holds, lastCol, started, ripple, hitCount;
     var COLS = 4, RH;
@@ -55,10 +67,9 @@ window.GAMES.tiles = {
     }
     function rowTop(r) { return api.H - (r.y + r.len - scroll) * RH; }
     function nextNote() {
-      var s = SONGS[song], m = s[noteI % s.length];
+      var s = SONGS[song].m, m = s[noteI % s.length];
       noteI++;
       if (!m) { m = s[noteI % s.length]; noteI++; }
-      if (noteI >= s.length * 2 && noteI % s.length === 0) song = (song + 1) % SONGS.length;
       return m;
     }
     function fail(col, y) {
@@ -73,13 +84,15 @@ window.GAMES.tiles = {
       reset: function () {
         D = DIFF[api.diff]; layout();
         rows = []; speed = D.sp; scroll = 0; nextRow = 1; noteI = 0; t = 0; deadT = 0; missLeft = D.miss; flashT = 0; holds = {}; lastCol = -1; started = false; ripple = []; hitCount = 0;
-        song = Math.floor(Math.random() * SONGS.length);
+        song = Math.min(SONGS.length - 1, api.store.get('pianoSong', 0)); if (!owned(song)) song = 0; buyT = 0;
         for (var i = 0; i < 8; i++) addRow();
       },
       resize: layout,
       idle: function (dt) { t += dt; },
       input: function (type, d) {
         if (deadT > 0) return;
+        if (type === 'press' && !started && d.y >= barY() && d.y <= barY() + 64) { pick(d.x); return; }
+        if (type === 'press' && !started && !owned(song)) { api.toast('🔒 Сначала купи песню или выбери другую'); return; }
         if (type === 'press') {
           var col = Math.floor(d.x / (api.W / COLS));
           var yRow = scroll + (api.H - d.y) / RH; // строка под пальцем
@@ -113,6 +126,7 @@ window.GAMES.tiles = {
       update: function (dt) {
         t += dt;
         if (flashT > 0) flashT -= dt;
+        if (buyT > 0) buyT -= dt;
         for (var q = ripple.length - 1; q >= 0; q--) { ripple[q].life -= dt; if (ripple[q].life <= 0) ripple.splice(q, 1); }
         if (deadT > 0) { deadT -= dt; if (deadT <= 0) api.gameOver(); return; }
         if (!started) return;
@@ -213,6 +227,7 @@ window.GAMES.tiles = {
           c.fillText('♪', p.x + (1 - k) * 18, p.y - (1 - k) * 70); c.fillText('♫', p.x - (1 - k) * 22, p.y - (1 - k) * 50);
           c.globalAlpha = 1;
         }
+        if (!started) drawPicker(c, W);
         // HUD: скорость и жизни
         var sp = speed.toFixed(1) + ' ♪/s';
         c.font = '900 13px system-ui, sans-serif'; c.textAlign = 'right'; c.textBaseline = 'middle';
@@ -231,6 +246,35 @@ window.GAMES.tiles = {
         c.textAlign = 'left'; c.textBaseline = 'alphabetic';
       }
     };
+    // выбор песни до старта: ◀ название ▶, нажатие на закрытую песню — покупка (второе нажатие подтверждает)
+    function pick(x) {
+      var W = api.W;
+      if (x < 56 || x > W - 56) {
+        song = (song + (x < 56 ? SONGS.length - 1 : 1)) % SONGS.length; buyT = 0; noteI = 0;
+        if (owned(song)) api.store.set('pianoSong', song);
+        playNote(SONGS[song].m[0]); return;
+      }
+      if (owned(song)) { playNote(SONGS[song].m[0]); return; }
+      var cn = api.store.get('coins', 0);
+      if (cn < PRICE) { api.toast('🔒 Нужно ' + PRICE + ' монет, у тебя ' + cn); api.sound('hit'); return; }
+      if (buyT <= 0) { buyT = 3; api.toast('Нажми ещё раз — купить за ' + PRICE + ' монет'); return; }
+      api.store.set('coins', cn - PRICE);
+      var o = api.store.get('pianoOwned', []); o.push(song); api.store.set('pianoOwned', o);
+      api.store.set('pianoSong', song); buyT = 0;
+      api.sound('bonus'); api.fx.confetti(30); api.toast('🎵 Песня «' + SONGS[song].n + '» куплена!');
+    }
+    function drawPicker(c, W) {
+      var y = barY(), h = 64, own = owned(song);
+      c.fillStyle = 'rgba(15,23,42,.88)'; rrect(c, 8, y, W - 16, h, 16); c.fill();
+      c.strokeStyle = 'rgba(165,180,252,.6)'; c.lineWidth = 1.5; c.stroke();
+      c.fillStyle = '#c7d2fe'; c.font = '900 26px system-ui, sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle';
+      c.fillText('◀', 32, y + h / 2); c.fillText('▶', W - 32, y + h / 2);
+      c.fillStyle = '#fff'; c.font = '800 16px system-ui, sans-serif';
+      var name = SONGS[song].n; while (c.measureText(name).width > W - 130 && name.length > 4) name = name.slice(0, -2) + '…';
+      c.fillText((own ? '🎵 ' : '🔒 ') + name, W / 2, y + 22);
+      c.font = '700 12px system-ui, sans-serif'; c.fillStyle = own ? '#a5b4fc' : '#fde68a';
+      c.fillText(own ? (song + 1) + ' / ' + SONGS.length + (song < FREE ? ' · бесплатно' : ' · куплено') : (buyT > 0 ? 'Нажми ещё раз для покупки' : 'Купить за ' + PRICE + ' 🪙'), W / 2, y + 45);
+    }
     function rrect(c, x, y, w, h, r) { r = Math.min(r, w / 2, h / 2); c.beginPath(); c.moveTo(x + r, y); c.arcTo(x + w, y, x + w, y + h, r); c.arcTo(x + w, y + h, x, y + h, r); c.arcTo(x, y + h, x, y, r); c.arcTo(x, y, x + w, y, r); c.closePath(); }
     function pill(c, x, y, w, h) { rrect(c, x, y, w, h, h / 2); }
     function heart(c, x, y, s) {
