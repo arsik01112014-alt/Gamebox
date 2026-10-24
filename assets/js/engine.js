@@ -989,7 +989,7 @@
       '<div class="sec">' + t('ach.title') + ' · ' + got.length + ' / ' + ACH.length + '</div>' + achHtml +
       '<div class="sec">' + t('prof.medals') + ' · 🥇' + mc[3] + ' 🥈' + mc[2] + ' 🥉' + mc[1] + ' / ' + ORDER.length * 3 + '</div>' +
       '<div class="note pnote">' + t('prof.medalHint') + '</div>' +
-      (IS_APP ? '' : googleUser() ? '<button class="btn sec" data-glogout="1">Выйти из Google (' + escapeHtml(googleUser().n) + ')</button>' :
+      (IS_APP || window.YANDEX ? '' : googleUser() ? '<button class="btn sec" data-glogout="1">Выйти из Google (' + escapeHtml(googleUser().n) + ')</button>' :
         '<button class="btn" data-glogin="1">Войти через Google</button>') +
       '<button class="btn sec" data-ovr="1">🏆 Общий рейтинг</button>' +
       '<div class="plist">' + rows + '</div>' +
@@ -1356,7 +1356,7 @@
       (err ? '<div class="acct-err">' + escapeHtml(err) + '</div>' : '') +
       '<button class="btn" data-acct="guest">Играть как гость</button>' +
       Object.keys(accList()).map(function (u) { var x = accList()[u]; return '<button class="btn sec" data-acct="sw:' + u + '">' + escapeHtml((x.a || '🙂') + ' ' + (x.n || 'Игрок')) + ' · войти</button>'; }).join('') +
-      (IS_APP ? '' : '<button class="btn sec" data-acct="google">Войти через Google</button>') + '</div>';
+      (IS_APP || window.YANDEX ? '' : '<button class="btn sec" data-acct="google">Войти через Google</button>') + '</div>';
   }
   function acctHide() { var el = document.getElementById('acct'); if (el) el.remove(); }
   function acctGuest() {
