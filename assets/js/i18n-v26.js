@@ -7,7 +7,9 @@ Object.assign(window.I18N_MORE = window.I18N_MORE || {}, {
   'skin.minimal': ['Минимал', 'Minimal', 'Мінімал', 'Minimal', 'Minimal'],
   'skin.material': ['Мягкий', 'Soft', "М'який", 'Weich', 'Suave'],
   'skin.comic': ['Комикс', 'Comic', 'Комікс', 'Comic', 'Cómic'],
-  'skin.terminal': ['Терминал', 'Terminal', 'Термінал', 'Terminal', 'Terminal']
+  'skin.terminal': ['Терминал', 'Terminal', 'Термінал', 'Terminal', 'Terminal'],
+  'skin.liquid': ['Жидкое стекло', 'Liquid Glass', 'Рідке скло', 'Flüssigglas', 'Cristal líquido'],
+  'skin.liquiddark': ['Жидкое стекло · тёмное', 'Liquid Glass · dark', 'Рідке скло · темне', 'Flüssigglas · dunkel', 'Cristal líquido · oscuro']
 });
 (function () {
   var X = window.I18N_EXTRA = window.I18N_EXTRA || {};

@@ -1,0 +1,78 @@
+/* GameBox — стиль «Жидкое стекло» (как в новой iOS): мягкий цветной фон, полупрозрачные матовые поверхности
+   с бликом по верхнему краю, скругления-«пилюли». Подключается после css/style.css и css/skin-minimal.css.
+   Светлый вариант — data-skin="liquid", тёмный — data-skin="liquiddark" */
+html:root {
+  --paper:#eef1f8; --card:rgba(255,255,255,.5); --sunk:rgba(255,255,255,.38); --ink:#0b0b0f; --mute:#6b6f7b; --acc:#0071e3; --acc-ink:#fff;
+  --hl:rgba(0,113,227,.12); --okbg:rgba(52,199,89,.16);
+  --line:rgba(255,255,255,.72); --line2:rgba(255,255,255,.55);
+  --soft:inset 0 1px 0 rgba(255,255,255,.9), 0 8px 28px rgba(30,40,80,.12);
+  --glassbg:radial-gradient(120% 60% at 0% 0%, #a5c8ff 0%, transparent 60%), radial-gradient(90% 60% at 100% 30%, #ffc6e3 0%, transparent 60%),
+    radial-gradient(90% 70% at 30% 100%, #c8f5e1 0%, transparent 60%), #eef1f8;
+  --blur:blur(22px) saturate(180%);
+  --fd:-apple-system, 'SF Pro Display', 'GB Inter', system-ui, Roboto, sans-serif;
+  --fb:-apple-system, 'SF Pro Text', 'GB Inter', system-ui, Roboto, sans-serif;
+}
+html[data-skin="liquiddark"]:root {
+  --paper:#05060a; --card:rgba(255,255,255,.08); --sunk:rgba(255,255,255,.06); --ink:#f5f5f7; --mute:#9a9ca6; --acc:#0a84ff; --acc-ink:#fff;
+  --hl:rgba(10,132,255,.2); --okbg:rgba(48,209,88,.18);
+  --line:rgba(255,255,255,.14); --line2:rgba(255,255,255,.1);
+  --soft:inset 0 1px 0 rgba(255,255,255,.16), 0 10px 30px rgba(0,0,0,.45);
+  --glassbg:radial-gradient(110% 55% at 0% 0%, rgba(64,92,255,.55) 0%, transparent 60%), radial-gradient(90% 60% at 100% 35%, rgba(191,64,191,.45) 0%, transparent 60%),
+    radial-gradient(90% 70% at 30% 100%, rgba(0,160,140,.4) 0%, transparent 60%), #05060a;
+}
+html, body { background:var(--paper); }
+#menu { background:var(--glassbg); background-attachment:fixed; color:var(--ink); }
+.sheet-card { background:var(--glassbg); color:var(--ink); }
+.sheet { background:rgba(10,12,20,.28); }
+
+/* стеклянные поверхности */
+.icon-btn, .coinb, .prof, .stat.rnd, .dl, .tasks, .search, .rc, .card, .pill, .panel, .btn.sec, .favb, .qset button, .lgame, .lang, .row, .box,
+.pstats div, .pg, .ach, .pname button.av, .pname input, .thm, .avb, .onb li, html .skb, .dseg, .mseg, .ltabs, .acct-card {
+  background-color:var(--card); -webkit-backdrop-filter:var(--blur); backdrop-filter:var(--blur);
+  border:1px solid var(--line); box-shadow:var(--soft); }
+.prof, .tasks, .panel, .box, .card { border-radius:26px; }
+.icon-btn { border-radius:50%; }
+.coinb, .pill, .search, .lang, .btn, .btn.sec, .qset button { border-radius:999px; }
+.dseg, .mseg, .ltabs { border-radius:999px; padding:3px; }
+.dseg.on, .mseg.on, .sg.on, .ltabs .lt.on { background:rgba(255,255,255,.85); color:#0b0b0f; border-radius:999px; box-shadow:0 2px 8px rgba(0,0,0,.12); }
+html[data-skin="liquiddark"] .dseg.on, html[data-skin="liquiddark"] .mseg.on, html[data-skin="liquiddark"] .sg.on, html[data-skin="liquiddark"] .ltabs .lt.on { background:rgba(255,255,255,.22); color:#fff; }
+
+/* главная кнопка — плотное стекло с акцентом */
+.btn { background:var(--acc); color:var(--acc-ink); border:0; box-shadow:inset 0 1px 0 rgba(255,255,255,.35), 0 8px 22px rgba(0,113,227,.3); font-weight:600; }
+.btn.sec { color:var(--acc); }
+.press:active, .card:active, .btn:active, .row:active, .pg:active, .rc:active { transform:scale(.97); }
+
+/* типографика как в iOS: крупные заголовки */
+.top h1 { font:700 22px/1 var(--fd); letter-spacing:-.01em; }
+.sheet-card h3 { font:700 26px/1.15 var(--fd); letter-spacing:-.02em; }
+.prof .lv b { background:var(--acc); color:#fff; border-color:transparent; }
+.ach.on { background-color:var(--hl); }
+.thm.sel, .avb.sel, html .skb.on { border-color:var(--acc); box-shadow:0 0 0 2px var(--acc), var(--soft); }
+
+/* окна поверх всего */
+.acct-card { color:var(--ink); background-color:var(--card); }
+html[data-skin="liquid"] .acct-card { background-color:rgba(255,255,255,.78); }
+html[data-skin="liquiddark"] .acct-card { background-color:rgba(28,28,32,.8); }
+.acct-card p, .ach-card p { color:var(--mute); }
+.ach-card .ach-st { color:var(--acc); }
+.acct-card input { background:var(--sunk); color:var(--ink); border:1px solid var(--line); }
+.upd-x { background:var(--sunk); color:var(--ink); }
+#updBar { background:rgba(255,255,255,.6); color:#0b0b0f; -webkit-backdrop-filter:var(--blur); backdrop-filter:var(--blur); border:1px solid rgba(255,255,255,.8); border-radius:999px; }
+html[data-skin="liquiddark"] #updBar { background:rgba(40,40,46,.7); color:#fff; border-color:rgba(255,255,255,.16); }
+#updBar button { background:var(--acc); color:#fff; border-radius:999px; }
+
+/* экран игры: тёмное стекло */
+.hud, .controls { background:rgba(10,12,20,.72); -webkit-backdrop-filter:var(--blur); backdrop-filter:var(--blur); }
+
+
+/* в «Минимал» эти элементы залиты цветом текста — в стекле заливаем акцентом (иначе в тёмном варианте белое на белом) */
+.dl .dgo, .tab.on, .lang.on, .plv .big { background:var(--acc); border-color:var(--acc); color:#fff; }
+.dl .dgo svg { color:#fff; fill:currentColor; }
+.task .tbar i { background:var(--acc); }
+.achpop { background:rgba(255,255,255,.75); -webkit-backdrop-filter:var(--blur); backdrop-filter:var(--blur); border-radius:999px; }
+html[data-skin="liquiddark"] .achpop { background:rgba(40,40,46,.8); color:#fff; }
+/* окна поверх игры (старт, пауза, конец) — тёмное стекло на любом варианте */
+.overlay .panel { background-color:rgba(18,20,28,.6); border-color:rgba(255,255,255,.14); color:#f5f5f7;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.15), 0 12px 40px rgba(0,0,0,.4); }
+.overlay .panel .dseg, .overlay .panel .mseg { background-color:rgba(255,255,255,.08) !important; border-color:rgba(255,255,255,.12); color:#e5e7eb; }
+.overlay .panel small, .overlay .panel p { color:#c7cad3; }

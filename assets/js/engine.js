@@ -356,13 +356,16 @@
   function themeOf() { var id = store.get('theme', 'night'); return THEMES.filter(function (x) { return x.id === id; })[0] || THEMES[0]; }
   function avatar() { return store.get('avatar', 'i:kid'); }
   // стили интерфейса: glass — «Стекло» (как до 2.4), paper — «Бумага» (2.4), остальные — надстройки над «Бумагой»
-  var SKINS = ['glass', 'minimal'];
-  var SKIN_CSS = { glass: ['css/glass.css'], minimal: ['css/style.css', 'css/skin-minimal.css'] }; // style.css — общая база для «Минимал»
+  var SKINS = ['glass', 'minimal', 'liquid', 'liquiddark'];
+  var LQ = ['css/style.css', 'css/skin-minimal.css', 'css/skin-liquid.css']; // «Жидкое стекло» — надстройка над «Минимал»
+  var SKIN_CSS = { glass: ['css/glass.css'], minimal: ['css/style.css', 'css/skin-minimal.css'], liquid: LQ, liquiddark: LQ }; // style.css — общая база для «Минимал»
   function skinOf() { var k = store.get('skin', 'glass'); return SKIN_CSS[k] ? k : 'glass'; }
   function applySkin() {
     var k = skinOf(), f = SKIN_CSS[k], b = document.getElementById('baseCss'), o = document.getElementById('skinCss');
     if (b && b.getAttribute('href') !== f[0]) b.setAttribute('href', f[0]);
     if (o) { if (f[1]) { if (o.getAttribute('href') !== f[1]) o.setAttribute('href', f[1]); o.disabled = false; } else o.disabled = true; }
+    var o2 = document.getElementById('skin2Css');
+    if (o2) { if (f[2]) { if (o2.getAttribute('href') !== f[2]) o2.setAttribute('href', f[2]); o2.disabled = false; } else o2.disabled = true; }
     document.documentElement.setAttribute('data-skin', k);
     applyTheme();
     if (typeof bgRaf !== 'undefined' && App.state === 'menu') startBg();
@@ -1254,7 +1257,7 @@
       '<button class="btn" data-set="close">' + t('set.done') + '</button>' +
       '<div class="ver">' + t('set.version') + ' 3.0</div>';
   }
-  var APP_CODE = 34, updInfo = null, updBarHidden = false;
+  var APP_CODE = 35, updInfo = null, updBarHidden = false;
   // обновление APK: в /app/latest лежит {code, name, notes, url}, админка публикует его кнопкой.
   // WebView приложения не умеет скачивать файлы сам, поэтому «Скачать» копирует ссылку для браузера
   function checkUpdate() {
