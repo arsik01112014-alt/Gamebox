@@ -1299,14 +1299,31 @@
     var el = document.getElementById('promoIn'), code = (el && el.value || '').toUpperCase().replace(/\s+/g, '');
     if (!code) return;
     var key = promoHash(code), r = PROMO[key], used = store.get('promoUsed', []);
-    if (!r) { api.toast('Неверный промокод'); return; }
+    if (!r) { redeemServer(key); return; }
     if (used.indexOf(key) >= 0) { api.toast('Этот промокод уже активирован'); return; }
     store.set('promoUsed', used.concat(key));
+    applyReward(r);
+  }
+  function applyReward(r) {
     if (r.u) store.set('unlocked', store.get('unlocked', []).concat(r.u === 'all' ? Object.keys(LOCKED) : [r.u]));
-    if (r.c) addCoins(r.c);
+    if (r.c) addCoins(+r.c);
     fxConfetti(40); Sound.play('bonus');
     api.toast(r.m || ('🎁 Промокод активирован' + (r.c ? ': +' + r.c + ' монет' : '') + (r.u ? ', игры открыты' : '')));
     renderMenu(); renderProfile();
+  }
+  // промокоды из админки: promos/{хэш}, активации promoUses/{хэш}/{uid} — один раз на аккаунт, с лимитом max
+  function redeemServer(key) {
+    Online.auth(function (tok) {
+      if (!tok) { api.toast('Нужен интернет'); return; }
+      var me = Online.me;
+      Promise.all([getJ('/promos/' + key), getJ('/promoUses/' + key)]).then(function (x) {
+        var pr = x[0], uses = x[1] || {};
+        if (!pr) { api.toast('Неверный промокод'); return; }
+        if (uses[me]) { api.toast('Этот промокод уже активирован'); return; }
+        if (pr.max && Object.keys(uses).length >= pr.max) { api.toast('Промокод закончился'); return; }
+        return putJ('PUT', '/promoUses/' + key + '/' + me, true).then(function () { applyReward(pr); });
+      }).catch(function () { api.toast('Не удалось активировать, попробуй ещё раз'); });
+    });
   }
   function egg(key, coinsN, msg) {
     if (store.get('egg_' + key, false)) return false;
@@ -1360,7 +1377,8 @@
     Sound.init(); Sound.play('click');
     if (b.getAttribute('data-acct') === 'guest') acctGuest(); else googleLogin();
   });
-  if (!store.get('acct', null)) acctShow();
+  // вошедшим через Google до появления окна входа окно не показываем
+  if (!store.get('acct', null)) { if (googleUser()) store.set('acct', { type: 'google', n: googleUser().n }); else acctShow(); }
   /* ---------- «в сети», публичный профиль, баны (аккаунт и IP), значки ---------- */
   // присутствие пишется как рекорд-время в lb/_seen_0/{uid}: s только растёт, поэтому подходят правила рейтинга
   var BADGES = { creator: ['👑', 'Создатель'], admin: ['🛡️', 'Админ'], moder: ['🔨', 'Модератор'], tester: ['🧪', 'Тестер'], vip: ['💎', 'VIP'], verified: ['✅', 'Проверен'] };
@@ -1371,7 +1389,7 @@
   function ipKey(ip) { return String(ip).replace(/[.:]/g, '_'); }
   function profileData() {
     var mc = medalCount(), a = store.get('acct', null) || {};
-    return { n: deviceName().slice(0, 16), a: avatar(), st: store.get('pStatus', ''), c: store.get('pColor', ''), ty: a.type || 'guest',
+    return { n: deviceName().slice(0, 16), a: avatar(), st: store.get('pStatus', ''), c: store.get('pColor', ''), ty: googleUser() ? 'google' : (a.type || 'guest'), co: coins(),
       lv: lvlInfo(store.get('xp', 0)).n, md: [mc[3], mc[2], mc[1]], pl: store.get('plays', 0), since: store.get('since', ''), t: { '.sv': 'timestamp' } };
   }
   function beatPresence() {
@@ -1383,6 +1401,17 @@
       Online.req('PUT', '/profiles/' + me, profileData);
       Online.req('GET', '/bans/' + me, undefined, function (e, v) { banAcc = !e && !!v; setBanned(); });
       Online.req('GET', '/badges/' + me, undefined, function (e, v) { if (!e) myBadges = v || {}; });
+      // монеты от админа: gifts/{uid}; удаляем, и только если удаление прошло, начисляем — без двойного начисления
+      Online.req('GET', '/gifts/' + me, undefined, function (e, g) {
+        if (e || !g) return;
+        var sum = 0, msg = '';
+        Object.keys(g).forEach(function (k) { sum += +(g[k] && g[k].c) || 0; msg = msg || (g[k] && g[k].m) || ''; });
+        Online.req('DELETE', '/gifts/' + me, undefined, function (e2) {
+          if (e2 || !sum) return;
+          addCoins(sum); renderProfileChip(); Sound.play('bonus'); if (sum > 0) fxConfetti(50);
+          api.toast((sum > 0 ? '🎁 Подарок от администрации: +' + sum : 'Администрация списала ' + (-sum)) + ' монет' + (msg ? ' — ' + msg : ''));
+        });
+      });
       // IP нужен только для бана по адресу; читать его может только админ (см. правила базы)
       if (myIp) checkIpBan();
       else fetch('https://api.ipify.org?format=json').then(function (r) { return r.json(); }).then(function (j) {

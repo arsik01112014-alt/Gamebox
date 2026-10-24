@@ -67,7 +67,7 @@ pre { background:var(--card); border:1px solid var(--line); border-radius:12px; 
 var FB = { key: 'AIzaSyDglJuu3uT8vIrAsLByo8cqMWywbS1rgxw', db: 'https://gamebox-73da2-default-rtdb.europe-west1.firebasedatabase.app' };
 var ONLINE_MS = 3 * 60 * 1000, ROOM_MS = 45000;
 var BADGES = { creator: ['👑', 'Создатель'], admin: ['🛡️', 'Админ'], moder: ['🔨', 'Модератор'], tester: ['🧪', 'Тестер'], vip: ['💎', 'VIP'], verified: ['✅', 'Проверен'] };
-var TABS = [['home', '📊 Обзор'], ['players', '👥 Игроки'], ['bans', '🚫 Баны'], ['rooms', '🎮 Комнаты'], ['top', '🏆 Рейтинг'], ['setup', '⚙️ Настройка']];
+var TABS = [['home', '📊 Обзор'], ['players', '👥 Игроки'], ['bans', '🚫 Баны'], ['rooms', '🎮 Комнаты'], ['top', '🏆 Рейтинг'], ['promos', '🎁 Промокоды'], ['setup', '⚙️ Настройка']];
 var FILTERS = [['all', 'Все'], ['on', 'Онлайн'], ['guest', 'Гости'], ['google', 'Google'], ['ban', 'Забанены'], ['badge', 'Со значками']];
 var tab = 'home', flt = 'all', query = '', D = null, me = null, openUid = null;
 
@@ -85,6 +85,26 @@ function copy(text) {
   function fallback() { var ta = document.createElement('textarea'); ta.value = text; document.body.appendChild(ta); ta.select(); try { document.execCommand('copy'); toast('Скопировано'); } catch (e) { toast('Не удалось скопировать'); } ta.remove(); }
   try { navigator.clipboard.writeText(text).then(function () { toast('Скопировано'); }, fallback); } catch (e) { fallback(); }
 }
+// пороги медалей игр (node tools/gen_medals.js): рейтинг считается так же, как в игре, — по таблицам всех игр, с офлайн-игроками
+var MEDALS = {"snake":[15,40,80],"flappy":[5,20,50],"mario":[2000,8000,20000],"tetris":[2000,10000,30000],"g2048":[2000,8000,20000],"breakout":[1000,5000,15000],"space":[2000,10000,30000],"dino":[300,1000,2500],"mines":[300,1500,4000],"pacman":[1500,5000,12000],"match3":[1500,5000,12000],"pong":[300,800,1500],"chess":[300,1500,3000],"checkers":[300,1500,3000],"nardy":[1000,2500,5000],"billiards":[300,1200,3000],"battleship":[1000,2200,3800],"ttt":[150,400,800],"sudoku":[600,1800,3500],"darts":[300,1200,2500],"tug":[300,900,1800],"slither":[100,400,1000],"tanks":[2000,6000,15000],"stack":[15,40,80],"jumper":[1000,5000,15000],"memory":[1000,2500,4500],"mole":[300,900,1800],"simon":[100,300,700],"asteroids":[2000,8000,20000],"crossy":[20,60,150],"fruit":[100,400,1000],"knife":[20,60,120],"tiles":[50,150,350],"bubbles":[1000,4000,10000],"connect4":[300,1500,3000],"reversi":[300,1500,3000],"puzzle15":[800,2000,3500],"blocks":[300,1000,2500],"colorjump":[5,15,35],"airhockey":[600,1500,3000],"racing":[150,500,1200],"archery":[400,700,900],"basket":[20,50,90],"maze":[500,1500,3500],"solitaire":[300,1500,3000],"yahtzee":[150,220,280],"sokoban":[1000,2600,5000],"watersort":[800,2000,3400],"mahjong":[800,2600,6500],"gomoku":[1800,3500,5000],"dots":[900,2000,3200],"bowling":[90,150,210],"minigolf":[300,450,600],"pinball":[100000,400000,1200000],"penalty":[400,1150,1900],"towerdef":[2500,8000,14000],"numbers":[1500,4000,8000],"reflex":[2500,3800,4600],"dodge":[300,900,1800],"lights":[1200,3000,5000],"flood":[1000,2200,3600],"hangman":[400,1000,1800],"nim":[600,1500,3000],"blackjack":[800,2000,3500],"guess":[500,1200,2000],"bulls":[600,1500,2500],"wordle":[500,1500,3000],"lines":[200,600,1200],"blockblast":[500,1500,3000],"arrows":[800,2000,4000]};
+function overall(lb) {
+  var best = {}, who = {}, pts = {};
+  Object.keys(lb).forEach(function (key) {
+    var id = key.slice(0, key.lastIndexOf('_')), th = MEDALS[id], board = lb[key] || {};
+    if (key.charAt(0) === '_' || !th) return;
+    Object.keys(board).forEach(function (u) {
+      var r = board[u] || {}, sc = +r.s || 0, m = sc >= th[2] ? 3 : sc >= th[1] ? 2 : sc >= th[0] ? 1 : 0, k = u + '|' + id;
+      if (m > (best[k] || 0)) best[k] = m;
+      if (!who[u] || (r.t || 0) > (who[u].t || 0)) who[u] = r;
+    });
+  });
+  Object.keys(best).forEach(function (k) { var u = k.split('|')[0]; pts[u] = (pts[u] || 0) + best[k]; });
+  return Object.keys(pts).filter(function (u) { return pts[u] > 0; }).map(function (u) { return { u: u, n: who[u].n, a: who[u].a, s: pts[u] }; })
+    .sort(function (x, y) { return y.s - x.s; }).slice(0, 100);
+}
+// тот же хэш промокода, что в игре (djb2 от кода в верхнем регистре без пробелов)
+function promoHash(s) { var h = 5381; for (var i = 0; i < s.length; i++) h = (h * 33 + s.charCodeAt(i)) >>> 0; return h.toString(16); }
+function genCode() { var A = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789', c = 'GB-'; for (var i = 0; i < 8; i++) c += (i === 4 ? '-' : '') + A[Math.floor(Math.random() * A.length)]; return c; }
 function badgeChips(b, all) {
   return Object.keys(BADGES).filter(function (k) { return all || (b && b[k]); }).map(function (k) {
     return '<span class="bdg b-' + k + (b && b[k] ? '' : ' off') + '">' + BADGES[k][0] + ' ' + BADGES[k][1] + '</span>';
@@ -116,7 +136,7 @@ function req(method, path, body) {
 function act(p, okMsg) { return p.then(function () { toast(okMsg); return refresh(); }, function (e) { toast(e === 401 || e === 403 ? 'Нет прав: обнови правила базы (вкладка «Настройка»)' : 'Ошибка: ' + e); }); }
 
 function load() {
-  var paths = ['/lb', '/rooms', '/bans', '/profiles', '/badges', '/ips', '/ipbans'];
+  var paths = ['/lb', '/rooms', '/bans', '/profiles', '/badges', '/ips', '/ipbans', '/promos', '/promoUses'];
   return Promise.all(paths.map(function (p) { return req('GET', p).catch(function (e) { return { __err: e }; }); })).then(function (r) {
     function ok(x) { return x && !x.__err ? x : {}; }
     var lb = ok(r[0]), seen = lb._seen_0 || {}, nick = lb._nick_0 || {}, top = lb._all_0 || {};
@@ -145,7 +165,8 @@ function load() {
       players: players, rooms: roomList, failed: r.filter(function (x) { return x && x.__err; }).length, ipsOk: !(r[5] && r[5].__err),
       byId: P, banList: Object.keys(bans).map(function (u) { return { u: u, n: (bans[u] && bans[u].n) || (P[u] && P[u].n) || '' }; }),
       ipBanList: Object.keys(ipbans).map(function (k) { return { k: k, v: ipbans[k] || {} }; }),
-      top: Object.keys(top).map(function (u) { return { u: u, n: top[u].n, a: top[u].a, s: top[u].s }; }).sort(function (x, y) { return y.s - x.s; }).slice(0, 30)
+      top: overall(lb),
+      promos: Object.keys(ok(r[7])).map(function (h) { var v = ok(r[7])[h] || {}; return { h: h, v: v, used: Object.keys(ok(r[8])[h] || {}).length }; }).sort(function (x, y) { return (y.v.t || 0) - (x.v.t || 0); })
     };
   });
 }
@@ -189,6 +210,19 @@ function render() {
     v.innerHTML = warn + (D.top.length ? D.top.map(function (p, i) {
       return '<div class="row click" data-uid="' + esc(p.u) + '"><div class="av">' + (i < 3 ? ['🥇', '🥈', '🥉'][i] : '<b>' + (i + 1) + '</b>') + '</div><div class="m"><b>' + esc((p.a || '') + ' ' + (p.n || '?')) + '</b><small>ID ' + esc(p.u.slice(0, 10)) + '</small></div><b>' + esc(p.s) + '</b></div>';
     }).join('') : '<p class="note">Рейтинг пуст.</p>');
+  } else if (tab === 'promos') {
+    v.innerHTML = warn + '<h2>Новый промокод</h2>' +
+      '<div class="row" style="display:block"><input id="pc" placeholder="Код" value="' + genCode() + '" style="margin-bottom:8px">' +
+      '<div class="grid2" style="margin:0 0 8px"><input id="pcc" type="number" placeholder="Монеты" value="100"><input id="pmax" type="number" placeholder="Лимит активаций (0 — без лимита)" value="0"></div>' +
+      '<input id="pu" placeholder="Открыть игру: id игры, all — все, пусто — ничего" style="margin-bottom:8px"><input id="pm" placeholder="Сообщение (необязательно)" style="margin-bottom:8px">' +
+      '<div class="acts" style="margin:0"><button class="sec" data-act="promo-gen">🎲 Другой код</button><button data-act="promo-create">Создать</button></div></div>' +
+      '<p class="note">Каждый аккаунт активирует код один раз. Встроенные коды из игры (WELCOME и др.) здесь не показываются, они работают как раньше.</p>' +
+      '<h2>Созданные (' + D.promos.length + ')</h2>' + (D.promos.length ? D.promos.map(function (x) {
+        var v = x.v;
+        return '<div class="row"><div class="av">🎁</div><div class="m"><b>' + esc(v.code || x.h) + '</b><small>' + (v.c ? '+' + esc(v.c) + ' монет' : '') + (v.u ? ' · открыть: ' + esc(v.u) : '') +
+          ' · активаций ' + x.used + (v.max ? ' / ' + esc(v.max) : '') + (v.m ? ' · «' + esc(v.m) + '»' : '') + '</small></div>' +
+          '<button class="sec" data-act="promo-copy" data-id="' + esc(v.code || '') + '">📋</button><button class="red" data-act="promo-del" data-id="' + esc(x.h) + '">✕</button></div>';
+      }).join('') : '<p class="note">Пока нет.</p>');
   } else {
     var rules = RULES.split('ADMIN_UID').join(me || 'ADMIN_UID');
     v.innerHTML = '<h2>Твой ID админа</h2><div class="row"><div class="m"><b>' + esc(me || 'нет связи') + '</b></div><button class="sec" data-act="copy-id">Копировать</button></div>' +
@@ -230,6 +264,8 @@ function openPlayer(uid) {
       var on = p.b && p.b[k];
       return '<button class="' + (on ? '' : 'sec') + '" data-act="badge" data-k="' + k + '" data-on="' + (on ? 1 : 0) + '">' + BADGES[k][0] + ' ' + BADGES[k][1] + (on ? ' ✓' : '') + '</button>';
     }).join('') + '</div>' +
+    '<h2>Монеты</h2><div class="row" style="display:block"><div class="note" style="margin-bottom:6px">Баланс у игрока: ' + (pr.co != null ? esc(pr.co) : 'неизвестен') + '. Начислится при следующем заходе или в течение минуты, если игра открыта.</div>' +
+    '<div class="grid2" style="margin:0 0 8px"><input id="gc" type="number" placeholder="Сколько (минус — списать)" value="100"><input id="gm" placeholder="Сообщение"></div><button data-act="gift" style="width:100%">💰 Начислить</button></div>' +
     '<h2>Действия</h2><div class="acts">' +
     (p.ban ? '<button class="green" data-act="unban" data-id="' + esc(uid) + '">Разбан аккаунта</button>' : '<button class="red" data-act="ban">Бан аккаунта</button>') +
     (p.ip ? (p.ipBan ? '<button class="green" data-act="unbanip" data-id="' + esc(ipKey(p.ip)) + '">Разбан IP</button>' : '<button class="amber" data-act="banip">Бан по IP</button>') : '<button class="sec" disabled>IP неизвестен</button>') +
@@ -258,10 +294,27 @@ document.addEventListener('click', function (e) {
   else if (a === 'unbanip') act(req('DELETE', '/ipbans/' + id), 'Бан IP снят');
   else if (a === 'badge') act(b.getAttribute('data-on') === '1' ? req('DELETE', '/badges/' + openUid + '/' + b.getAttribute('data-k')) : req('PUT', '/badges/' + openUid + '/' + b.getAttribute('data-k'), true), 'Значки обновлены');
   else if (a === 'close') act(req('DELETE', '/rooms/' + id), 'Комната закрыта');
+  else if (a === 'gift') {
+    var c = parseInt($('#gc').value, 10);
+    if (!c) { toast('Укажи количество монет'); return; }
+    act(req('POST', '/gifts/' + openUid, { c: c, m: $('#gm').value.trim().slice(0, 60), t: { '.sv': 'timestamp' } }), (c > 0 ? 'Начислено ' : 'Списано ') + Math.abs(c) + ' монет');
+  }
+  else if (a === 'promo-gen') $('#pc').value = genCode();
+  else if (a === 'promo-copy') copy(id);
+  else if (a === 'promo-del') act(req('DELETE', '/promos/' + id).then(function () { return req('DELETE', '/promoUses/' + id); }), 'Промокод удалён');
+  else if (a === 'promo-create') {
+    var code = $('#pc').value.toUpperCase().replace(/\s+/g, ''), coins = parseInt($('#pcc').value, 10) || 0, u = $('#pu').value.trim();
+    if (code.length < 3) { toast('Код слишком короткий'); return; }
+    if (!coins && !u) { toast('Укажи монеты или игру'); return; }
+    var body = { code: code, c: coins, max: parseInt($('#pmax').value, 10) || 0, t: { '.sv': 'timestamp' } };
+    if (u) body.u = u;
+    if ($('#pm').value.trim()) body.m = $('#pm').value.trim().slice(0, 60);
+    act(req('PUT', '/promos/' + promoHash(code), body), 'Промокод ' + code + ' создан');
+  }
 });
 
 // правила базы (те же, что в firebase-rules.json); ADMIN_UID заменяется на ID этой админки
-var RULES = JSON.stringify({"rules": {"app": {".read": true}, "lb": {".read": "auth != null", "$board": {".indexOn": ["s", "n"], "$uid": {".write": "auth != null && auth.uid === $uid && !root.child('bans').child(auth.uid).exists() && (!data.exists() || !newData.exists() || newData.child('s').val() >= data.child('s').val())"}}}, "rooms": {".read": "auth != null", ".indexOn": ["g", "pub"], "$code": {".write": "auth != null && (auth.uid === 'ADMIN_UID' || !root.child('bans').child(auth.uid).exists())"}}, "bans": {".read": "auth != null", "$uid": {".write": "auth != null && auth.uid === 'ADMIN_UID'"}}, "profiles": {".read": "auth != null", "$uid": {".write": "auth != null && auth.uid === $uid && !root.child('bans').child(auth.uid).exists()"}}, "badges": {".read": "auth != null", "$uid": {".write": "auth != null && auth.uid === 'ADMIN_UID'"}}, "friends": {".read": "auth != null", "$uid": {".write": "auth != null && auth.uid === $uid && !root.child('bans').child(auth.uid).exists()"}}, "freq": {"$uid": {".read": "auth != null && (auth.uid === $uid || auth.uid === 'ADMIN_UID')", "$from": {".write": "auth != null && (auth.uid === $from || auth.uid === $uid) && !root.child('bans').child(auth.uid).exists()"}}}, "ips": {".read": "auth != null && auth.uid === 'ADMIN_UID'", "$uid": {".write": "auth != null && auth.uid === $uid"}}, "ipbans": {".read": "auth != null && auth.uid === 'ADMIN_UID'", "$ip": {".read": "auth != null", ".write": "auth != null && auth.uid === 'ADMIN_UID'"}}}}, null, 2);
+var RULES = JSON.stringify({"rules": {"app": {".read": true}, "lb": {".read": "auth != null", "$board": {".indexOn": ["s", "n"], "$uid": {".write": "auth != null && auth.uid === $uid && !root.child('bans').child(auth.uid).exists() && (!data.exists() || !newData.exists() || newData.child('s').val() >= data.child('s').val())"}}}, "rooms": {".read": "auth != null", ".indexOn": ["g", "pub"], "$code": {".write": "auth != null && (auth.uid === 'ADMIN_UID' || !root.child('bans').child(auth.uid).exists())"}}, "bans": {".read": "auth != null", "$uid": {".write": "auth != null && auth.uid === 'ADMIN_UID'"}}, "profiles": {".read": "auth != null", "$uid": {".write": "auth != null && auth.uid === $uid && !root.child('bans').child(auth.uid).exists()"}}, "badges": {".read": "auth != null", "$uid": {".write": "auth != null && auth.uid === 'ADMIN_UID'"}}, "friends": {".read": "auth != null", "$uid": {".write": "auth != null && auth.uid === $uid && !root.child('bans').child(auth.uid).exists()"}}, "freq": {"$uid": {".read": "auth != null && (auth.uid === $uid || auth.uid === 'ADMIN_UID')", "$from": {".write": "auth != null && (auth.uid === $from || auth.uid === $uid) && !root.child('bans').child(auth.uid).exists()"}}}, "ips": {".read": "auth != null && auth.uid === 'ADMIN_UID'", "$uid": {".write": "auth != null && auth.uid === $uid"}}, "ipbans": {".read": "auth != null && auth.uid === 'ADMIN_UID'", "$ip": {".read": "auth != null", ".write": "auth != null && auth.uid === 'ADMIN_UID'"}}, "gifts": {"$uid": {".read": "auth != null && (auth.uid === $uid || auth.uid === 'ADMIN_UID')", ".write": "auth != null && (auth.uid === 'ADMIN_UID' || (auth.uid === $uid && !newData.exists()))"}}, "promos": {".read": "auth != null && auth.uid === 'ADMIN_UID'", "$h": {".read": "auth != null", ".write": "auth != null && auth.uid === 'ADMIN_UID'"}}, "promoUses": {".read": "auth != null && auth.uid === 'ADMIN_UID'", "$h": {".read": "auth != null", ".write": "auth != null && auth.uid === 'ADMIN_UID'", "$uid": {".write": "auth != null && auth.uid === $uid && !data.exists() && !root.child('bans').child(auth.uid).exists()"}}}}}, null, 2);
 
 refresh();
 setInterval(function () { if (!document.hidden && !openUid) refresh(); }, 15000);

@@ -69,6 +69,29 @@
         ".read": "auth != null",
         ".write": "auth != null && auth.uid === 'ADMIN_UID'"
       }
+    },
+    "gifts": {
+      "$uid": {
+        ".read": "auth != null && (auth.uid === $uid || auth.uid === 'ADMIN_UID')",
+        ".write": "auth != null && (auth.uid === 'ADMIN_UID' || (auth.uid === $uid && !newData.exists()))"
+      }
+    },
+    "promos": {
+      ".read": "auth != null && auth.uid === 'ADMIN_UID'",
+      "$h": {
+        ".read": "auth != null",
+        ".write": "auth != null && auth.uid === 'ADMIN_UID'"
+      }
+    },
+    "promoUses": {
+      ".read": "auth != null && auth.uid === 'ADMIN_UID'",
+      "$h": {
+        ".read": "auth != null",
+        ".write": "auth != null && auth.uid === 'ADMIN_UID'",
+        "$uid": {
+          ".write": "auth != null && auth.uid === $uid && !data.exists() && !root.child('bans').child(auth.uid).exists()"
+        }
+      }
     }
   }
 }
