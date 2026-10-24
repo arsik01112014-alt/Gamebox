@@ -1225,11 +1225,14 @@
   // WebView приложения не умеет скачивать файлы сам, поэтому «Скачать» копирует ссылку для браузера
   function checkUpdate() {
     if (IS_APP === false || !Online.ok()) return; // на сайте обновлять APK не нужно
-    Online.req('GET', '/app/latest', undefined, function (e, r) {
-      if (e || !r || !(r.code > APP_CODE)) return;
-      updInfo = r; // не перекрывать окно первого входа
-      (function wait() { if (document.getElementById('acctNick')) setTimeout(wait, 2000); else showUpdate(); })();
-    });
+    // версия берётся с сайта (version.json обновляется вместе с APK) и из админки; показывается более новая
+    function got(r) {
+      if (!r || !(r.code > APP_CODE) || (updInfo && updInfo.code >= r.code)) return;
+      var first = !updInfo; updInfo = r;
+      if (first) (function wait() { if (document.getElementById('acctNick')) setTimeout(wait, 2000); else showUpdate(); })(); // не перекрывать окно первого входа
+    }
+    fetch('https://arsik01112014-alt.github.io/Gamebox/version.json?t=' + Date.now()).then(function (r) { return r.json(); }).then(got).catch(function () { });
+    Online.req('GET', '/app/latest', undefined, function (e, r) { if (!e) got(r); });
   }
   function copyText(s) {
     var ta = document.createElement('textarea'); ta.value = s; document.body.appendChild(ta); ta.select();
