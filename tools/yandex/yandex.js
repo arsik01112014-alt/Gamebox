@@ -9,3 +9,17 @@ window.addEventListener('load', function () {
     if (ysdk.features && ysdk.features.LoadingAPI) ysdk.features.LoadingAPI.ready();
   }).catch(function () { });
 });
+// реклама Яндекса: полноэкранная после партии (не чаще раза в минуту) и за награду; звук на время показа выключается
+function gbAudio(on) { if (window.GBAudio) window.GBAudio(on); }
+window.GBAds = {
+  last: 0,
+  inter: function () {
+    if (!window.ysdk || Date.now() - this.last < 60000) return;
+    this.last = Date.now();
+    ysdk.adv.showFullscreenAdv({ callbacks: { onOpen: function () { gbAudio(false); }, onClose: function () { gbAudio(true); }, onError: function () { gbAudio(true); } } });
+  },
+  reward: function (onReward) {
+    if (!window.ysdk) return;
+    ysdk.adv.showRewardedVideo({ callbacks: { onOpen: function () { gbAudio(false); }, onRewarded: onReward, onClose: function () { gbAudio(true); }, onError: function () { gbAudio(true); } } });
+  }
+};

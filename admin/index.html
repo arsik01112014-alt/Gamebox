@@ -136,11 +136,11 @@ function req(method, path, body) {
 function act(p, okMsg) { return p.then(function () { toast(okMsg); return refresh(); }, function (e) { toast(e === 401 || e === 403 ? 'Нет прав: обнови правила базы (вкладка «Настройка»)' : 'Ошибка: ' + e); }); }
 
 function load() {
-  var paths = ['/lb', '/rooms', '/bans', '/profiles', '/badges', '/ips', '/ipbans', '/promos', '/promoUses'];
+  var paths = ['/lb', '/rooms', '/bans', '/profiles', '/badges', '/ips', '/ipbans', '/promos', '/promoUses', '/noads'];
   return Promise.all(paths.map(function (p) { return req('GET', p).catch(function (e) { return { __err: e }; }); })).then(function (r) {
     function ok(x) { return x && !x.__err ? x : {}; }
     var lb = ok(r[0]), seen = lb._seen_0 || {}, nick = lb._nick_0 || {}, top = lb._all_0 || {};
-    var rooms = ok(r[1]), bans = ok(r[2]), prof = ok(r[3]), badges = ok(r[4]), ips = ok(r[5]), ipbans = ok(r[6]);
+    var rooms = ok(r[1]), bans = ok(r[2]), prof = ok(r[3]), badges = ok(r[4]), ips = ok(r[5]), ipbans = ok(r[6]), noads = ok(r[9]);
     var now = Date.now(), P = {};
     function person(u) { return P[u] || (P[u] = { u: u, n: '', a: '', s: 0 }); }
     Object.keys(seen).forEach(function (u) { var v = seen[u] || {}, p = person(u); p.s = Math.max(p.s, +v.s || 0); p.n = v.n || p.n; p.a = v.a || p.a; });
@@ -153,7 +153,7 @@ function load() {
     Object.keys(prof).forEach(function (u) { var v = prof[u] || {}, p = person(u); p.pr = v; p.s = Math.max(p.s, +v.t || 0); p.n = p.n || v.n; p.a = v.a || p.a; });
     var players = Object.keys(P).map(function (u) {
       var p = P[u], ip = ips[u] && ips[u].ip;
-      p.ty = (p.pr && p.pr.ty) || 'guest'; p.on = now - p.s < ONLINE_MS; p.ban = !!bans[u]; p.b = badges[u] || null;
+      p.ty = (p.pr && p.pr.ty) || 'guest'; p.noads = !!noads[u]; p.on = now - p.s < ONLINE_MS; p.ban = !!bans[u]; p.b = badges[u] || null;
       p.ip = ip || ''; p.ipBan = !!(ip && ipbans[ipKey(ip)]);
       return p;
     }).sort(function (x, y) { return (y.on - x.on) || (y.s - x.s); });
@@ -269,6 +269,7 @@ function openPlayer(uid) {
     '<h2>Действия</h2><div class="acts">' +
     (p.ban ? '<button class="green" data-act="unban" data-id="' + esc(uid) + '">Разбан аккаунта</button>' : '<button class="red" data-act="ban">Бан аккаунта</button>') +
     (p.ip ? (p.ipBan ? '<button class="green" data-act="unbanip" data-id="' + esc(ipKey(p.ip)) + '">Разбан IP</button>' : '<button class="amber" data-act="banip">Бан по IP</button>') : '<button class="sec" disabled>IP неизвестен</button>') +
+    '<button class="' + (p.noads ? 'green' : 'sec') + '" data-act="noads" data-on="' + (p.noads ? 1 : 0) + '" style="grid-column:1 / -1">' + (p.noads ? '✓ Реклама отключена · включить' : '📺 Отключить рекламу этому игроку') + '</button>' +
     '<button class="red" data-act="delacc" style="grid-column:1 / -1">🗑 Удалить аккаунт</button><button class="sec" data-act="copy-uid">Копировать ID</button><button class="sec" data-act="hide">Закрыть</button></div>';
   $('#modal').classList.add('show');
 }
@@ -300,9 +301,10 @@ document.addEventListener('click', function (e) {
     window.delAsk = 0;
     var up = {}; up['deleted/' + openUid] = true;
     Object.keys(D.lb || {}).forEach(function (k) { if ((D.lb[k] || {})[openUid]) up['lb/' + k + '/' + openUid] = null; });
-    ['profiles', 'friends', 'ips', 'gifts', 'freq', 'badges'].forEach(function (r) { up[r + '/' + openUid] = null; });
+    ['profiles', 'friends', 'ips', 'gifts', 'freq', 'badges', 'noads'].forEach(function (r) { up[r + '/' + openUid] = null; });
     act(req('PATCH', '/', up).then(function () { closeModal(); }), 'Аккаунт удалён');
   }
+  else if (a === 'noads') act(b.getAttribute('data-on') === '1' ? req('DELETE', '/noads/' + openUid) : req('PUT', '/noads/' + openUid, true), b.getAttribute('data-on') === '1' ? 'Реклама снова включена' : 'Реклама отключена');
   else if (a === 'gift') {
     var c = parseInt($('#gc').value, 10);
     if (!c) { toast('Укажи количество монет'); return; }
@@ -323,7 +325,7 @@ document.addEventListener('click', function (e) {
 });
 
 // правила базы (те же, что в firebase-rules.json); ADMIN_UID заменяется на ID этой админки
-var RULES = JSON.stringify({"rules": {"app": {".read": true}, "lb": {".read": "auth != null", "$board": {".indexOn": ["s", "n"], "$uid": {".write": "auth != null && (auth.uid === 'ADMIN_UID' || (auth.uid === $uid && !root.child('bans').child(auth.uid).exists() && (!data.exists() || !newData.exists() || newData.child('s').val() >= data.child('s').val())))"}}}, "rooms": {".read": "auth != null", ".indexOn": ["g", "pub"], "$code": {".write": "auth != null && (auth.uid === 'ADMIN_UID' || !root.child('bans').child(auth.uid).exists())"}}, "bans": {".read": "auth != null", "$uid": {".write": "auth != null && auth.uid === 'ADMIN_UID'"}}, "profiles": {".read": "auth != null", "$uid": {".write": "auth != null && (auth.uid === 'ADMIN_UID' || (auth.uid === $uid && !root.child('bans').child(auth.uid).exists()))"}}, "badges": {".read": "auth != null", "$uid": {".write": "auth != null && auth.uid === 'ADMIN_UID'"}}, "friends": {".read": "auth != null", "$uid": {".write": "auth != null && (auth.uid === 'ADMIN_UID' || (auth.uid === $uid && !root.child('bans').child(auth.uid).exists()))"}}, "freq": {"$uid": {".read": "auth != null && (auth.uid === $uid || auth.uid === 'ADMIN_UID')", ".write": "auth != null && (auth.uid === $uid || auth.uid === 'ADMIN_UID')", "$from": {".write": "auth != null && (auth.uid === $from || auth.uid === $uid) && !root.child('bans').child(auth.uid).exists()"}}}, "ips": {".read": "auth != null && auth.uid === 'ADMIN_UID'", "$uid": {".write": "auth != null && (auth.uid === $uid || auth.uid === 'ADMIN_UID')"}}, "ipbans": {".read": "auth != null && auth.uid === 'ADMIN_UID'", "$ip": {".read": "auth != null", ".write": "auth != null && auth.uid === 'ADMIN_UID'"}}, "gifts": {"$uid": {".read": "auth != null && (auth.uid === $uid || auth.uid === 'ADMIN_UID')", ".write": "auth != null && (auth.uid === 'ADMIN_UID' || (auth.uid === $uid && !newData.exists()))"}}, "promos": {".read": "auth != null && auth.uid === 'ADMIN_UID'", "$h": {".read": "auth != null", ".write": "auth != null && auth.uid === 'ADMIN_UID'"}}, "promoUses": {".read": "auth != null && auth.uid === 'ADMIN_UID'", "$h": {".read": "auth != null", ".write": "auth != null && auth.uid === 'ADMIN_UID'", "$uid": {".write": "auth != null && auth.uid === $uid && !data.exists() && !root.child('bans').child(auth.uid).exists()"}}}, "deleted": {"$uid": {".read": "auth != null && (auth.uid === $uid || auth.uid === 'ADMIN_UID')", ".write": "auth != null && (auth.uid === 'ADMIN_UID' || (auth.uid === $uid && !newData.exists()))"}}}}, null, 2);
+var RULES = JSON.stringify({"rules": {"app": {".read": true}, "lb": {".read": "auth != null", "$board": {".indexOn": ["s", "n"], "$uid": {".write": "auth != null && (auth.uid === 'ADMIN_UID' || (auth.uid === $uid && !root.child('bans').child(auth.uid).exists() && (!data.exists() || !newData.exists() || newData.child('s').val() >= data.child('s').val())))"}}}, "rooms": {".read": "auth != null", ".indexOn": ["g", "pub"], "$code": {".write": "auth != null && (auth.uid === 'ADMIN_UID' || !root.child('bans').child(auth.uid).exists())"}}, "bans": {".read": "auth != null", "$uid": {".write": "auth != null && auth.uid === 'ADMIN_UID'"}}, "profiles": {".read": "auth != null", "$uid": {".write": "auth != null && (auth.uid === 'ADMIN_UID' || (auth.uid === $uid && !root.child('bans').child(auth.uid).exists()))"}}, "badges": {".read": "auth != null", "$uid": {".write": "auth != null && auth.uid === 'ADMIN_UID'"}}, "friends": {".read": "auth != null", "$uid": {".write": "auth != null && (auth.uid === 'ADMIN_UID' || (auth.uid === $uid && !root.child('bans').child(auth.uid).exists()))"}}, "freq": {"$uid": {".read": "auth != null && (auth.uid === $uid || auth.uid === 'ADMIN_UID')", ".write": "auth != null && (auth.uid === $uid || auth.uid === 'ADMIN_UID')", "$from": {".write": "auth != null && (auth.uid === $from || auth.uid === $uid) && !root.child('bans').child(auth.uid).exists()"}}}, "ips": {".read": "auth != null && auth.uid === 'ADMIN_UID'", "$uid": {".write": "auth != null && (auth.uid === $uid || auth.uid === 'ADMIN_UID')"}}, "ipbans": {".read": "auth != null && auth.uid === 'ADMIN_UID'", "$ip": {".read": "auth != null", ".write": "auth != null && auth.uid === 'ADMIN_UID'"}}, "gifts": {"$uid": {".read": "auth != null && (auth.uid === $uid || auth.uid === 'ADMIN_UID')", ".write": "auth != null && (auth.uid === 'ADMIN_UID' || (auth.uid === $uid && !newData.exists()))"}}, "promos": {".read": "auth != null && auth.uid === 'ADMIN_UID'", "$h": {".read": "auth != null", ".write": "auth != null && auth.uid === 'ADMIN_UID'"}}, "promoUses": {".read": "auth != null && auth.uid === 'ADMIN_UID'", "$h": {".read": "auth != null", ".write": "auth != null && auth.uid === 'ADMIN_UID'", "$uid": {".write": "auth != null && auth.uid === $uid && !data.exists() && !root.child('bans').child(auth.uid).exists()"}}}, "deleted": {"$uid": {".read": "auth != null && (auth.uid === $uid || auth.uid === 'ADMIN_UID')", ".write": "auth != null && (auth.uid === 'ADMIN_UID' || (auth.uid === $uid && !newData.exists()))"}}, "noads": {".read": "auth != null && auth.uid === 'ADMIN_UID'", "$uid": {".read": "auth != null && (auth.uid === $uid || auth.uid === 'ADMIN_UID')", ".write": "auth != null && auth.uid === 'ADMIN_UID'"}}}}, null, 2);
 
 refresh();
 setInterval(function () { if (!document.hidden && !openUid) refresh(); }, 15000);

@@ -1031,6 +1031,7 @@
     $('#setBody').innerHTML = '<h3>🛍️ ' + t('shop.title') + '</h3>' +
       '<div class="shopbal"><span>' + t('shop.balance') + '</span><b><span class=\"coin\"></span>' + coins() + '</b></div>' +
       '<div class="note pnote">' + t('shop.hint') + '</div>' + giftHtml() +
+      (window.GBAds && !noAds ? '<button class="btn sec" data-rwd="1">📺 Посмотреть рекламу: +50 монет</button>' : '') +
       '<div class="sec">' + t('shop.themes') + '</div><div class="themes">' + THEMES.map(function (T) {
         var own = T.price === 0 || owned('t:' + T.id);
         return '<button class="thm' + (T.id === cur ? ' sel' : '') + '" data-buy="t:' + T.id + '">' + (skinOf() === 'glass' ? '<i style="background:radial-gradient(circle at 30% 30%,rgba(' + T.blobs[0] + ',.9),transparent 60%),radial-gradient(circle at 80% 70%,rgba(' + T.blobs[1] + ',.9),transparent 60%),' + T.bg + '"></i>' : '<i style="background:' + T.v[0] + '"><b style="position:absolute;left:10px;top:10px;width:26px;height:26px;border-radius:7px;background:' + T.v[5] + ';border:2px solid ' + T.v[3] + ';box-shadow:3px 3px 0 ' + T.v[7] + '"></b><b style="position:absolute;right:10px;bottom:10px;width:34px;height:14px;border-radius:4px;background:' + T.v[1] + ';border:2px solid ' + T.v[3] + '"></b></i>') +
@@ -1386,7 +1387,9 @@
   /* ---------- «в сети», публичный профиль, баны (аккаунт и IP), значки ---------- */
   // присутствие пишется как рекорд-время в lb/_seen_0/{uid}: s только растёт, поэтому подходят правила рейтинга
   var BADGES = { creator: ['👑', 'Создатель'], admin: ['🛡️', 'Админ'], moder: ['🔨', 'Модератор'], tester: ['🧪', 'Тестер'], vip: ['💎', 'VIP'], verified: ['✅', 'Проверен'] };
-  var banAcc = false, banIp = false, myBadges = {}, myIp = null;
+  var banAcc = false, banIp = false, myBadges = {}, myIp = null, noAds = false;
+  // звук на время рекламы: музыка и эффекты идут через один AudioContext
+  window.GBAudio = function (on) { try { if (Sound.ctx) { if (on) Sound.ctx.resume(); else Sound.ctx.suspend(); } } catch (e) { } };
   function badgesHtml(b) {
     return Object.keys(BADGES).filter(function (k) { return b && b[k]; }).map(function (k) { return '<span class="bdg bdg-' + k + '">' + BADGES[k][0] + ' ' + BADGES[k][1] + '</span>'; }).join('');
   }
@@ -1405,6 +1408,7 @@
       Online.req('PUT', '/profiles/' + me, profileData);
       Online.req('GET', '/bans/' + me, undefined, function (e, v) { banAcc = !e && !!v; setBanned(); });
       Online.req('GET', '/badges/' + me, undefined, function (e, v) { if (!e) myBadges = v || {}; });
+      Online.req('GET', '/noads/' + me, undefined, function (e, v) { noAds = !e && !!v; }); // админ отключил рекламу этому игроку
       // аккаунт удалён админом: снимаем метку и начинаем с чистого листа
       Online.req('GET', '/deleted/' + me, undefined, function (e, v) {
         if (e || !v) return;
@@ -1664,6 +1668,10 @@
     if (pcz) { saveStatus(); store.set('pColor', pcz.getAttribute('data-pcolor')); Sound.play('click'); renderProfile(); renderProfileChip(); return; }
     if (e.target.closest('[data-lbhide]')) { saveStatus(); store.set('lbHide', !store.get('lbHide', false)); Sound.play('click'); renderProfile(); return; }
     if (e.target.closest('[data-gift]')) { claimGift(); return; }
+    if (e.target.closest('[data-rwd]') && window.GBAds) {
+      window.GBAds.reward(function () { addCoins(50); fxConfetti(40); Sound.play('bonus'); api.toast('📺 +50 монет за просмотр'); renderShop(); renderProfileChip(); });
+      return;
+    }
     if (e.target.closest('[data-accs]')) { Sound.play('click'); openAccounts(); return; }
     var afz = e.target.closest('[data-accforget]'); if (afz) { forgetAcc(afz.getAttribute('data-accforget')); openAccounts(); return; }
     var asz = e.target.closest('[data-accsw]'); if (asz) { switchAcc(asz.getAttribute('data-accsw')); return; }
@@ -2010,6 +2018,8 @@
     App.state = 'over';
     clearKeys();
     Music.stop();
+    // реклама Яндекса после партии (только в сборке для Яндекс Игр; не чаще раза в минуту — см. tools/yandex/yandex.js)
+    if (window.GBAds && !noAds) setTimeout(function () { window.GBAds.inter(); }, 800);
     flushTime();
     var b = best(App.id, App.diff), rec = saveBest(), P = progress(rec, b);
     Sound.play(rec && App.score > 0 ? 'win' : 'over');
