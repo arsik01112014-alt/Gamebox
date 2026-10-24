@@ -62,6 +62,7 @@ pre { background:var(--card); border:1px solid var(--line); border-radius:12px; 
 <main id="view"></main>
 <div id="modal"><div class="sheet" id="sheet"></div></div>
 <div id="toast"></div>
+<script src="avatars.js"></script>
 <script>
 // Админка GameBox: тот же Firebase-проект; вход анонимный, ID админа прописывается в правилах базы
 var FB = { key: 'AIzaSyDglJuu3uT8vIrAsLByo8cqMWywbS1rgxw', db: 'https://gamebox-73da2-default-rtdb.europe-west1.firebasedatabase.app' };
@@ -213,12 +214,12 @@ function render() {
     v.innerHTML = warn + (D.rooms.length ? D.rooms.map(function (r) {
       var live = now - r.last < ROOM_MS;
       return '<div class="row"><div class="av">🎮<i class="' + (live ? 'on' : '') + '"></i></div><div class="m"><b>' + esc(r.g || '?') + ' · ' + esc(r.code) + (r.pub ? '' : ' <span class="chip">приватная</span>') + '</b>' +
-        '<small>' + esc((r.h.a || '') + ' ' + (r.h.n || '?')) + (r.c ? ' vs ' + esc((r.c.a || '') + ' ' + (r.c.n || '?')) : ' · ждёт соперника') + ' · ' + ago(r.last) + '</small></div>' +
+        '<small>' + GBAV.html(r.h.a) + ' ' + esc(r.h.n || '?') + (r.c ? ' vs ' + GBAV.html(r.c.a) + ' ' + esc(r.c.n || '?') : ' · ждёт соперника') + ' · ' + ago(r.last) + '</small></div>' +
         '<button class="red" data-act="close" data-id="' + esc(r.code) + '">Закрыть</button></div>';
     }).join('') : '<p class="note">Комнат нет.</p>');
   } else if (tab === 'top') {
     v.innerHTML = warn + (D.top.length ? D.top.map(function (p, i) {
-      return '<div class="row click" data-uid="' + esc(p.u) + '"><div class="av">' + (i < 3 ? ['🥇', '🥈', '🥉'][i] : '<b>' + (i + 1) + '</b>') + '</div><div class="m"><b>' + esc((p.a || '') + ' ' + (p.n || '?')) + '</b><small>ID ' + esc(p.u.slice(0, 10)) + '</small></div><b>' + esc(p.s) + '</b></div>';
+      return '<div class="row click" data-uid="' + esc(p.u) + '"><div class="av">' + (i < 3 ? ['🥇', '🥈', '🥉'][i] : '<b>' + (i + 1) + '</b>') + '</div><div class="m"><b>' + GBAV.html(p.a) + ' ' + esc(p.n || '?') + '</b><small>ID ' + esc(p.u.slice(0, 10)) + '</small></div><b>' + esc(p.s) + '</b></div>';
     }).join('') : '<p class="note">Рейтинг пуст.</p>');
   } else if (tab === 'promos') {
     v.innerHTML = warn + '<h2>Новый промокод</h2>' +
@@ -244,7 +245,7 @@ function render() {
 }
 function stat(ic, n, label) { return '<div class="stat"><span class="ic">' + ic + '</span><b>' + n + '</b><small>' + label + '</small></div>'; }
 function playerRow(p) {
-  return '<div class="row click" data-uid="' + esc(p.u) + '"><div class="av">' + esc(p.a || '🙂') + '<i class="' + (p.on ? 'on' : '') + '"></i></div>' +
+  return '<div class="row click" data-uid="' + esc(p.u) + '"><div class="av">' + GBAV.html(p.a || 'i:kid') + '<i class="' + (p.on ? 'on' : '') + '"></i></div>' +
     '<div class="m"><b>' + esc(p.n || 'без ника') + (p.ty === 'google' ? '<span class="chip g">Google</span>' : '<span class="chip">Гость</span>') + (!p.pr && !p.s ? '<span class="chip">старая версия</span>' : '') +
     (p.ban || p.ipBan ? '<span class="chip ban">БАН' + (p.ipBan && !p.ban ? ' IP' : '') + '</span>' : '') + '</b>' +
     '<small>' + (p.on ? 'в сети' : ago(p.s)) + ' · ID ' + esc(p.u.slice(0, 8)) + (p.b ? ' · ' + Object.keys(BADGES).filter(function (k) { return p.b[k]; }).map(function (k) { return BADGES[k][0]; }).join('') : '') + '</small></div></div>';
@@ -264,7 +265,7 @@ function renderPlayers() {
 function openPlayer(uid) {
   openUid = uid;
   var p = (D && D.byId[uid]) || { u: uid, n: '', a: '', s: 0 }, pr = p.pr || {}, md = pr.md || [];
-  $('#sheet').innerHTML = '<div class="phead"><div class="av">' + esc(p.a || '🙂') + '<i class="' + (p.on ? 'on' : '') + '"></i></div><div class="m"><b style="font-size:19px">' + esc(p.n || 'без ника') + '</b>' +
+  $('#sheet').innerHTML = '<div class="phead"><div class="av">' + GBAV.html(p.a || 'i:kid') + '<i class="' + (p.on ? 'on' : '') + '"></i></div><div class="m"><b style="font-size:19px">' + esc(p.n || 'без ника') + '</b>' +
     '<small>' + (p.ty === 'google' ? 'Вход через Google' : 'Гость') + ' · ' + (p.on ? '🟢 в сети' : ago(p.s)) + '</small><div>' + badgeChips(p.b) + '</div></div></div>' +
     (pr.st ? '<p class="note">«' + esc(pr.st) + '»</p>' : '') +
     '<div class="grid2"><div class="kv"><small>Уровень</small><b>' + (pr.lv || '—') + '</b></div><div class="kv"><small>Медали</small><b>🥇' + (md[0] || 0) + ' 🥈' + (md[1] || 0) + ' 🥉' + (md[2] || 0) + '</b></div>' +

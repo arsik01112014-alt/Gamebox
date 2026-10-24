@@ -7,7 +7,7 @@
     'stack', 'jumper', 'memory', 'mole', 'simon',
     'asteroids', 'crossy', 'fruit', 'knife', 'tiles', 'bubbles', 'connect4', 'reversi',
     'puzzle15', 'blocks', 'colorjump', 'airhockey', 'racing', 'archery', 'basket', 'maze', 'solitaire', 'yahtzee',
-    'sokoban', 'watersort', 'mahjong', 'gomoku', 'dots', 'bowling', 'minigolf', 'pinball', 'penalty', 'towerdef', 'numbers', 'reflex', 'dodge', 'lights', 'flood', 'hangman', 'nim', 'blackjack', 'guess', 'bulls', 'wordle', 'lines', 'blockblast', 'arrows', 'catcher', 'aim'].filter(function (id) { return GAMES[id]; });
+    'sokoban', 'watersort', 'mahjong', 'gomoku', 'dots', 'bowling', 'minigolf', 'pinball', 'penalty', 'towerdef', 'numbers', 'reflex', 'dodge', 'lights', 'flood', 'hangman', 'nim', 'blackjack', 'guess', 'bulls', 'wordle', 'lines', 'blockblast', 'arrows', 'catcher', 'aim', 'clicker', 'runner', 'dash', 'bricks'].filter(function (id) { return GAMES[id]; });
   var $ = function (s) { return document.querySelector(s); };
 
   /* ---------- хранилище ---------- */
@@ -315,12 +315,25 @@
     { id: 'lava', name: 'Лава', price: 500, dark: true, bg: '#120302', blobs: ['239,68,68', '249,115,22', '234,88,12'], a1: '#ef4444', a2: '#f97316', v: ['#1a0d0b', '#2a1512', '#3a1d18', '#f7dfd6', '#b08a80', '#ff6a3d', '#1a0d0b', '#000000'] },
     { id: 'space', name: 'Космос', price: 650, dark: true, bg: '#02010a', blobs: ['99,102,241', '168,85,247', '14,165,233'], a1: '#6366f1', a2: '#a855f7', v: ['#0f0f1a', '#191a2b', '#24253a', '#e6e6f5', '#9a9ab8', '#818cf8', '#0f0f1a', '#000000'] },
     { id: 'sakura', name: 'Сакура', price: 700, bg: '#1a0a12', blobs: ['249,168,212', '253,242,248', '225,29,72'], a1: '#f472b6', a2: '#e11d48', v: ['#f9e1ec', '#fff7fb', '#f1c9dc', '#2b1220', '#7f5a6c', '#e11d48', '#ffffff', '#2b1220'] },
-    { id: 'royal', name: 'Королевская', price: 1200, bg: '#0d0618', blobs: ['147,51,234', '250,204,21', '79,70,229'], a1: '#9333ea', a2: '#facc15', v: ['#e7dcf3', '#faf6ff', '#d6c6ea', '#1c1029', '#6c5a80', '#7e22ce', '#ffffff', '#1c1029'] }
+    { id: 'royal', name: 'Королевская', price: 1200, bg: '#0d0618', blobs: ['147,51,234', '250,204,21', '79,70,229'], a1: '#9333ea', a2: '#facc15', v: ['#e7dcf3', '#faf6ff', '#d6c6ea', '#1c1029', '#6c5a80', '#7e22ce', '#ffffff', '#1c1029'] },
+    { id: 'abyss', name: 'Бездна', price: 400, dark: true, bg: '#020f1f', blobs: ['14,165,233', '6,182,212', '30,64,175'], a1: '#0ea5e9', a2: '#06b6d4', v: ['#0b1d2e', '#112a40', '#183754', '#dff3ff', '#8fb3c9', '#22d3ee', '#0b1d2e', '#000000'] },
+    { id: 'jungle', name: 'Джунгли', price: 450, dark: true, bg: '#03110a', blobs: ['34,197,94', '132,204,22', '21,128,61'], a1: '#22c55e', a2: '#84cc16', v: ['#0d1f14', '#14301e', '#1b4028', '#e3f7e8', '#93b89c', '#4ade80', '#0d1f14', '#000000'] },
+    { id: 'cyber', name: 'Киберпанк', price: 900, dark: true, bg: '#05000f', blobs: ['236,72,153', '34,211,238', '163,230,53'], a1: '#ec4899', a2: '#22d3ee', v: ['#120a1f', '#1c1030', '#281745', '#fdf2ff', '#b39ac9', '#f0abfc', '#120a1f', '#000000'] },
+    { id: 'amber', name: 'Янтарь', price: 1800, dark: true, bg: '#0f0a00', blobs: ['250,204,21', '245,158,11', '161,98,7'], a1: '#facc15', a2: '#f59e0b', v: ['#1c1505', '#2a200a', '#3a2c10', '#fff8e1', '#c9b07a', '#facc15', '#1c1505', '#000000'] },
   ];
-  var AVATARS = [['😀', 0], ['😎', 0], ['🐱', 50], ['🦊', 50], ['🐼', 80], ['🐸', 80], ['🦁', 120], ['🐙', 120], ['🤖', 200], ['👽', 200], ['🐲', 350], ['👑', 600],
-    ['🐧', 60], ['🐵', 60], ['🐻', 80], ['🦋', 100], ['🐝', 100], ['🐯', 120], ['🦄', 150], ['🎃', 150], ['👻', 150],
-    ['🤠', 200], ['🦖', 250], ['💀', 300], ['🥷', 400], ['🧙', 400], ['🦸', 500], ['💎', 1000]];
+  var AVATARS = window.GBAV.list, avH = window.GBAV.html;
+  // перенос старых эмодзи-аватарок (выбранной и купленных) на новые картинки
+  (function () {
+    var O = window.GBAV.old, a = store.get('avatar', '');
+    if (O[a]) store.set('avatar', 'i:' + O[a]);
+    var ow = store.get('owned', []), ch = false;
+    ow = ow.map(function (k) { var m = k.indexOf('a:') === 0 && O[k.slice(2)]; if (m) { ch = true; return 'a:i:' + m; } return k; });
+    if (ch) store.set('owned', ow);
+  })();
   function coins() { return store.get('coins', 0); }
+  // бустеры: [минут, цена]; конец действия хранится в store 'boostEnd'
+  var BOOSTS = [[30, 250], [120, 800]];
+  function boostLeft() { return Math.max(0, store.get('boostEnd', 0) - Date.now()); }
   function addCoins(n) { store.set('coins', Math.max(0, coins() + n)); }
   // игры за монеты: цена открытия, открытые хранятся в store 'unlocked'
   var LOCKED = { mario: 600, billiards: 500, towerdef: 500, pinball: 400, minigolf: 400, bowling: 300, mahjong: 300, lines: 250, wordle: 250 };
@@ -341,7 +354,7 @@
   }
   function owned(k) { return store.get('owned', []).indexOf(k) >= 0; }
   function themeOf() { var id = store.get('theme', 'night'); return THEMES.filter(function (x) { return x.id === id; })[0] || THEMES[0]; }
-  function avatar() { return store.get('avatar', '😀'); }
+  function avatar() { return store.get('avatar', 'i:kid'); }
   // стили интерфейса: glass — «Стекло» (как до 2.4), paper — «Бумага» (2.4), остальные — надстройки над «Бумагой»
   var SKINS = ['glass', 'minimal'];
   var SKIN_CSS = { glass: ['css/glass.css'], minimal: ['css/style.css', 'css/skin-minimal.css'] }; // style.css — общая база для «Минимал»
@@ -655,7 +668,7 @@
         self.rooms(game, function (e, list) {
           if (gen !== self.gen || Net.state !== 'idle') return;
           Net.found = {};
-          list.forEach(function (r) { Net.found[r.code] = { ip: r.code, port: 0, name: (r.a || '') + ' ' + r.n, game: game }; });
+          list.forEach(function (r) { Net.found[r.code] = { ip: r.code, port: 0, name: (window.GBAV.text(r.a) + ' ' + r.n).trim(), game: game }; });
           Net.offline = !!e;
           if (Net.onEvent) Net.onEvent({ type: 'found' });
         });
@@ -920,7 +933,7 @@
     $('#lvXp').textContent = L.cur + ' / ' + L.need + ' XP';
     $('#lvBar').style.width = Math.round(L.cur / L.need * 100) + '%';
     $('#mdSum').innerHTML = '🥇<b>' + mc[3] + '</b> 🥈<b>' + mc[2] + '</b> 🥉<b>' + mc[1] + '</b>';
-    $('#avEm').textContent = avatar();
+    $('#avEm').innerHTML = avH(avatar());
     $('#avEm').style.background = store.get('pColor', '');
     var cn = coins(); $('#coinN').textContent = cn >= 1e6 ? (Math.floor(cn / 1e5) / 10) + 'M' : cn >= 1e4 ? Math.floor(cn / 1e3) + 'K' : cn;
   }
@@ -963,7 +976,7 @@
       return '<div class="ach ' + (on ? 'on' : 'off') + '"><em>' + a[1] + '</em><small>' + t('ach.' + a[0]) + '</small></div>';
     }).join('') + '</div>';
     $('#setBody').innerHTML = '<h3>' + t('prof.title') + '</h3>' +
-      '<div class="pname"><button class="av" data-shop="1">' + avatar() + '</button><input id="pnameIn" maxlength="16"' + (store.get('acct', null) ? ' readonly' : '') + ' value="' + escapeHtml(deviceName()) + '" placeholder="' + t('prof.name') + '"></div>' +
+      '<div class="pname"><button class="av" data-shop="1">' + avH(avatar()) + '</button><input id="pnameIn" maxlength="16"' + (store.get('acct', null) ? ' readonly' : '') + ' value="' + escapeHtml(deviceName()) + '" placeholder="' + t('prof.name') + '"></div>' +
       '<div class="plv"><div class="big"><b>' + L.n + '</b><small>' + t('lvl.short') + '</small></div><div class="pr">' +
       '<b>' + t('lvl.r' + L.rank) + '</b><span class="bar"><i style="width:' + Math.round(L.cur / L.need * 100) + '%"></i></span>' +
       '<small>' + t('prof.next', L.n + 1, L.need - L.cur) + '</small></div></div>' +
@@ -1039,9 +1052,22 @@
       }).join('') + '</div>' +
       '<div class="sec">' + t('shop.avatars') + '</div><div class="avs">' + AVATARS.map(function (A) {
         var own = A[1] === 0 || owned('a:' + A[0]);
-        return '<button class="avb' + (A[0] === av ? ' sel' : '') + (own ? '' : ' lock') + '" data-buy="a:' + A[0] + '">' + A[0] + '<small>' + (own ? (A[0] === av ? '✔' : '') : A[1]) + '</small></button>';
+        return '<button class="avb' + (A[0] === av ? ' sel' : '') + (own ? '' : ' lock') + '" data-buy="a:' + A[0] + '">' + avH(A[0]) + '<small>' + (own ? (A[0] === av ? '✔' : '') : A[1]) + '</small></button>';
+      }).join('') + '</div>' +
+      '<div class="sec">⚡ Бустеры</div>' + (boostLeft() > 0 ? '<div class="note pnote">⚡ ×2 монеты действует ещё ' + Math.ceil(boostLeft() / 60000) + ' мин.</div>' : '') +
+      '<div class="themes">' + BOOSTS.map(function (B, i) {
+        return '<button class="thm" data-boost="' + i + '"><i style="display:flex;align-items:center;justify-content:center;font-size:30px;background:linear-gradient(135deg,#f59e0b,#ef4444)">⚡</i><span>×2 монеты · ' + (B[0] < 60 ? B[0] + ' мин' : B[0] / 60 + ' ч') + '<br><span class="coin"></span> ' + B[1] + '</span></button>';
       }).join('') + '</div>' +
       '<button class="btn" data-set="close">' + t('set.done') + '</button>';
+  }
+  var boostAsk = -1;
+  function buyBoost(i) {
+    var B = BOOSTS[i];
+    if (coins() < B[1]) { menuToast(t('shop.noMoney', B[1] - coins())); Sound.play('hit'); return; }
+    if (boostAsk !== i) { boostAsk = i; menuToast('Нажми ещё раз — купить за ' + B[1]); return; }
+    boostAsk = -1; addCoins(-B[1]);
+    store.set('boostEnd', Math.max(Date.now(), store.get('boostEnd', 0)) + B[0] * 60000);
+    Sound.play('bonus'); fxConfettiMenu(); renderShop(); renderProfileChip();
   }
   function buy(key) {
     var kind = key.slice(0, 1), id = key.slice(2), price;
@@ -1194,7 +1220,7 @@
       '<button class="btn" data-set="close">' + t('set.done') + '</button>' +
       '<div class="ver">' + t('set.version') + ' 3.0</div>';
   }
-  var APP_CODE = 32, updInfo = null, updBarHidden = false;
+  var APP_CODE = 33, updInfo = null, updBarHidden = false;
   // обновление APK: в /app/latest лежит {code, name, notes, url}, админка публикует его кнопкой.
   // WebView приложения не умеет скачивать файлы сам, поэтому «Скачать» копирует ссылку для браузера
   function checkUpdate() {
@@ -1240,7 +1266,7 @@
     if (err) h += '<div class="note pnote">' + t('on.offline') + '</div>';
     else if (rows === null) h += '<div class="lwait"><span class="spin"></span></div>';
     else if (!rows.length) h += '<div class="note pnote">' + t('lb.empty') + '</div>';
-    else rows.forEach(function (r, i) { h += '<div class="pg" data-player="' + escapeHtml(r.u) + '" style="' + (r.u === me ? 'outline:2px solid #facc15' : '') + '"><span class="pm">' + (i < 3 ? ['🥇', '🥈', '🥉'][i] : '<i>' + (i + 1) + '</i>') + '</span><div class="pn"><b>' + escapeHtml((r.a || '') + ' ' + (r.n || '?')) + '</b></div><b>' + r.s + '</b></div>'; });
+    else rows.forEach(function (r, i) { h += '<div class="pg" data-player="' + escapeHtml(r.u) + '" style="' + (r.u === me ? 'outline:2px solid #facc15' : '') + '"><span class="pm">' + (i < 3 ? ['🥇', '🥈', '🥉'][i] : '<i>' + (i + 1) + '</i>') + '</span><div class="pn"><b>' + avH(r.a) + ' ' + escapeHtml(r.n || '?') + '</b></div><b>' + r.s + '</b></div>'; });
     $('#setBody').innerHTML = h + '</div><button class="btn" data-set="close">' + t('set.done') + '</button>';
   }
   function openLb(id, d) {
@@ -1280,7 +1306,7 @@
     if (err) h += '<div class="note pnote">' + t('on.offline') + '</div>';
     else if (!rows) h += '<div class="lwait"><span class="spin"></span></div>';
     else if (!rows.length) h += '<div class="note pnote">' + t('lb.empty') + '</div>';
-    else rows.forEach(function (r, i) { h += '<div class="pg" data-player="' + escapeHtml(r.u) + '" style="' + (r.u === me ? 'outline:2px solid #facc15' : '') + '"><span class="pm">' + (i < 3 ? ['🥇', '🥈', '🥉'][i] : '<i>' + (i + 1) + '</i>') + '</span><div class="pn"><b>' + escapeHtml((r.a || '') + ' ' + (r.n || '?')) + '</b></div><b>' + r.s + '</b></div>'; });
+    else rows.forEach(function (r, i) { h += '<div class="pg" data-player="' + escapeHtml(r.u) + '" style="' + (r.u === me ? 'outline:2px solid #facc15' : '') + '"><span class="pm">' + (i < 3 ? ['🥇', '🥈', '🥉'][i] : '<i>' + (i + 1) + '</i>') + '</span><div class="pn"><b>' + avH(r.a) + ' ' + escapeHtml(r.n || '?') + '</b></div><b>' + r.s + '</b></div>'; });
     $('#setBody').innerHTML = h + '</div><button class="btn" data-set="close">' + t('set.done') + '</button>';
   }
   /* ---------- вход через Google: только на сайте, в WebView приложения Google вход запрещает ---------- */
@@ -1384,7 +1410,7 @@
       '<input id="acctNick" maxlength="16" placeholder="Ник" value="' + escapeHtml(val) + '">' +
       (err ? '<div class="acct-err">' + escapeHtml(err) + '</div>' : '') +
       '<button class="btn" data-acct="guest">Играть как гость</button>' +
-      Object.keys(accList()).map(function (u) { var x = accList()[u]; return '<button class="btn sec" data-acct="sw:' + u + '">' + escapeHtml((x.a || '🙂') + ' ' + (x.n || 'Игрок')) + ' · войти</button>'; }).join('') +
+      Object.keys(accList()).map(function (u) { var x = accList()[u]; return '<button class="btn sec" data-acct="sw:' + u + '">' + avH(x.a || 'i:kid') + ' ' + escapeHtml(x.n || 'Игрок') + ' · войти</button>'; }).join('') +
       (IS_APP || window.YANDEX ? '' : '<button class="btn sec" data-acct="google">Войти через Google</button>') + '</div>';
   }
   function acctHide() { var el = document.getElementById('acct'); if (el) el.remove(); }
@@ -1497,7 +1523,7 @@
     sheet.classList.remove('profile'); sheet.classList.add('show');
     $('#setBody').innerHTML = '<h3>🔄 Аккаунты на этом устройстве</h3><div class="plist">' + Object.keys(l).sort(function (a, b) { return l[b].t - l[a].t; }).map(function (u) {
       var x = l[u], now = u === cur;
-      return '<div class="pg"' + (now ? '' : ' data-accsw="' + u + '"') + '><span class="pm">' + escapeHtml(x.a || '🙂') + '</span><div class="pn"><b>' + escapeHtml(x.n || 'Игрок') + (now ? ' · сейчас' : '') + '</b>' +
+      return '<div class="pg"' + (now ? '' : ' data-accsw="' + u + '"') + '><span class="pm">' + avH(x.a || 'i:kid') + '</span><div class="pn"><b>' + escapeHtml(x.n || 'Игрок') + (now ? ' · сейчас' : '') + '</b>' +
         '<small>' + (x.ty === 'google' ? 'Google' : 'Гость') + (now ? '' : ' · нажми, чтобы войти') + '</small></div>' +
         (now ? '' : '<button class="btn sec" data-accforget="' + u + '" style="width:auto;margin:0;padding:6px 10px">✕</button>') + '</div>';
     }).join('') + '</div><button class="btn" data-accadd="1">➕ Добавить аккаунт</button>' +
@@ -1534,7 +1560,7 @@
         var act = uid === me ? '' : fr ? '<button class="btn sec" data-funf="' + uid + '">✓ В друзьях · удалить</button>' :
           out ? '<button class="btn sec" data-funf="' + uid + '">Заявка отправлена · отменить</button>' :
           '<button class="btn" data-fadd="' + uid + '">' + (inc ? '✓ Принять заявку в друзья' : '➕ Добавить в друзья') + '</button>';
-        $('#setBody').innerHTML = '<h3>' + escapeHtml((p.a || '🙂') + ' ' + (p.n || 'Игрок')) + '</h3>' +
+        $('#setBody').innerHTML = '<h3>' + avH(p.a || 'i:kid') + ' ' + escapeHtml(p.n || 'Игрок') + '</h3>' +
           '<div class="bdgs">' + badgesHtml(r[1]) + '</div>' +
           (p.st ? '<div class="note pnote">«' + escapeHtml(p.st) + '»</div>' : '') +
           '<div class="pstats"><div><b>' + (p.lv || 1) + '</b><small>Уровень</small></div>' +
@@ -1560,7 +1586,7 @@
           });
         }));
       }).then(function (list) {
-        function row(f, sub) { return '<div class="pg" data-player="' + f.u + '"><span class="pm">' + (isOnline(f.p.t) ? '🟢' : '⚪') + '</span><div class="pn"><b>' + escapeHtml((f.p.a || '') + ' ' + (f.p.n || 'Игрок')) + '</b><small>' + sub + '</small></div></div>'; }
+        function row(f, sub) { return '<div class="pg" data-player="' + f.u + '"><span class="pm">' + (isOnline(f.p.t) ? '🟢' : '⚪') + '</span><div class="pn"><b>' + avH(f.p.a) + ' ' + escapeHtml(f.p.n || 'Игрок') + '</b><small>' + sub + '</small></div></div>'; }
         var fr = list.filter(function (f) { return f.mine && f.mutual; }), inc = list.filter(function (f) { return f.inc && !f.mine; }), out = list.filter(function (f) { return f.mine && !f.mutual; });
         $('#setBody').innerHTML = '<h3>👥 Друзья</h3>' +
           '<div class="promo"><input id="friendIn" placeholder="ID друга"><button class="btn" data-fbyid="1">Добавить</button></div>' +
@@ -1594,12 +1620,12 @@
     if (!list.length) { box.innerHTML = ''; return; }
     var h = '<div class="ol-h"><span class="ol-dot"></span>Онлайн-матчи</div>';
     list.slice(0, 5).forEach(function (r) {
-      var g = GAMES[r.g], who = escapeHtml((r.h.a || '') + ' ' + (r.h.n || '?'));
+      var g = GAMES[r.g], who = avH(r.h.a) + ' ' + escapeHtml(r.h.n || '?');
       var act = r.c ? '<span class="ol-busy">Идёт матч</span>' : r.h.u === Online.me ? '<span class="ol-busy">Ваша комната</span>' :
         '<button class="ol-btn" data-join="' + r.code + '" data-game="' + r.g + '">Подключиться</button>';
       h += '<div class="ol-m" style="--c1:' + g.colors[0] + ';--c2:' + g.colors[1] + '"><span class="ol-i">' + ico(g.icon) + '</span>' +
         '<div class="ol-t"><b>' + escapeHtml(gt(r.g, 'title')) + '</b><small>' +
-        (r.c ? who + ' <em>vs</em> ' + escapeHtml((r.c.a || '') + ' ' + (r.c.n || '?')) : who + ' · ждёт соперника') + '</small></div>' + act + '</div>';
+        (r.c ? who + ' <em>vs</em> ' + avH(r.c.a) + ' ' + escapeHtml(r.c.n || '?') : who + ' · ждёт соперника') + '</small></div>' + act + '</div>';
     });
     box.innerHTML = h;
   }
@@ -1673,6 +1699,7 @@
     var bz = e.target.closest('[data-buy]'), shz = e.target.closest('[data-shop]'), bk = e.target.closest('[data-bk]');
     Sound.init();
     if (bz) { buy(bz.getAttribute('data-buy')); return; }
+    var bst = e.target.closest('[data-boost]'); if (bst) { buyBoost(+bst.getAttribute('data-boost')); return; }
     if (shz) { Sound.play('click'); renderShop(); return; }
     if (bk) { backupAct(bk.getAttribute('data-bk')); return; }
     var uz = e.target.closest('[data-upd]');
@@ -2034,6 +2061,7 @@
     if (dailyTasks().every(function (q) { return q.done; })) setFlag('tasks');
     if (single && ['chess', 'checkers', 'reversi', 'connect4', 'nardy'].indexOf(id) >= 0 && App.diff >= 2 && sc >= 1000) setFlag('brain');
     r.coins += Math.round(r.xp / 2);
+    if (boostLeft() > 0) r.coins *= 2; // бустер «×2 монеты» из магазина
     addCoins(r.coins);
     var xp0 = store.get('xp', 0);
     r.L0 = lvlInfo(xp0); r.L1 = lvlInfo(xp0 + r.xp);
@@ -2225,9 +2253,10 @@
 
   /* ---------- ввод ---------- */
   var touch = null;
-  function canvasDown(x, y) {
+  function canvasDown(x, y, tr) {
     touch = { x: x, y: y, t: Date.now() };
-    if (App.state === 'playing' && App.inst.input) App.inst.input('down', { x: x, y: y });
+    // trusted: нажатие от человека, а не программы (нужно кликеру для защиты от автокликеров)
+    if (App.state === 'playing' && App.inst.input) App.inst.input('down', { x: x, y: y, trusted: tr !== false });
   }
   function canvasUp(x, y) {
     if (!touch) return;
@@ -2265,7 +2294,7 @@
   }
   cv.addEventListener('touchstart', function (e) {
     e.preventDefault(); Sound.init(); multi(e, true);
-    var p = local(e.changedTouches[0]); canvasDown(p.x, p.y);
+    var p = local(e.changedTouches[0]); canvasDown(p.x, p.y, e.isTrusted);
   }, { passive: false });
   cv.addEventListener('touchmove', function (e) {
     e.preventDefault(); multi(e);
@@ -2279,7 +2308,7 @@
     canvasUp(p.x, p.y);
   }, { passive: false });
   cv.addEventListener('mousedown', function (e) {
-    Sound.init(); var p = local(e); canvasDown(p.x, p.y);
+    Sound.init(); var p = local(e); canvasDown(p.x, p.y, e.isTrusted);
     if (App.def && App.def.multiTouch && App.state === 'playing') App.inst.input('press', p);
   });
   cv.addEventListener('mousemove', function (e) {
@@ -2455,7 +2484,7 @@
   window.__App = App;
   if (!store.get('onboard', false)) {
     $('#setBody').innerHTML = '<div class="onb"><div class="big">🎮</div><h3>' + t('onb.title') + '</h3><p class="note pnote">' + t('onb.sub') + '</p>' +
-      '<div class="pname"><button class="av" data-shop="1">' + avatar() + '</button><input id="pnameIn" maxlength="16"' + (store.get('acct', null) ? ' readonly' : '') + ' value="' + escapeHtml(deviceName()) + '" placeholder="' + t('prof.name') + '"></div>' +
+      '<div class="pname"><button class="av" data-shop="1">' + avH(avatar()) + '</button><input id="pnameIn" maxlength="16"' + (store.get('acct', null) ? ' readonly' : '') + ' value="' + escapeHtml(deviceName()) + '" placeholder="' + t('prof.name') + '"></div>' +
       '<ul><li>' + t('onb.l1') + '</li><li>' + t('onb.l2') + '</li><li>' + t('onb.l3') + '</li><li>' + t('onb.l4') + '</li></ul>' +
       '<button class="btn" id="onbGo" data-set="close">' + t('onb.go') + '</button></div>';
     sheet.classList.add('show', 'profile'); store.set('onboard', true);

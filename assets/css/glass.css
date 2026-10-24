@@ -596,3 +596,5 @@ html, body { font-family: "Inter", system-ui, -apple-system, "Segoe UI", Roboto,
 #updBar span{flex:1}
 #updBar button{border:0;border-radius:10px;padding:6px 10px;font-weight:800;background:#fff;color:#3b1d8f;cursor:pointer}
 #updBar button:last-child{background:rgba(255,255,255,.25);color:#fff}
+.avb .avi{width:40px!important;height:40px!important;vertical-align:middle!important}
+#avEm .avi{width:100%!important;height:100%!important;vertical-align:top!important}
