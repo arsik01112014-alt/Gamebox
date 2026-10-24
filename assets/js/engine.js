@@ -979,6 +979,8 @@
       '<button class="row" data-lbhide="1"><span class="rl"><em>🙈</em>Скрыть меня из рейтинга</span><span>' + (store.get('lbHide', false) ? 'Вкл' : 'Выкл') + '</span></button>' +
       '<div class="promo"><input id="promoIn" maxlength="24" placeholder="Промокод"><button class="btn" data-promo="1">OK</button></div>' +
       '<button class="row" data-copyid="1"><span class="rl"><em>🆔</em>Мой ID: ' + escapeHtml((Online.me || '—').slice(0, 10)) + '</span><span>📋</span></button>' +
+      '<button class="row" data-accs="1"><span class="rl"><em>🔄</em>Сменить аккаунт</span><span>›</span></button>' +
+      '<button class="row danger" data-accrm="1"><span class="rl"><em>🗑️</em>Удалить аккаунт</span><span>!</span></button>' +
       '<div class="sec">Аккаунт</div><div class="pstats">' +
       '<div><b>' + ((store.get('acct', null) || {}).type === 'google' ? 'Google' : 'Гость') + '</b><small>Вход</small></div>' +
       '<div><b>' + escapeHtml(favGame()) + '</b><small>Любимая игра</small></div>' +
@@ -1353,6 +1355,7 @@
       '<input id="acctNick" maxlength="16" placeholder="Ник" value="' + escapeHtml(val) + '">' +
       (err ? '<div class="acct-err">' + escapeHtml(err) + '</div>' : '') +
       '<button class="btn" data-acct="guest">Играть как гость</button>' +
+      Object.keys(accList()).map(function (u) { var x = accList()[u]; return '<button class="btn sec" data-acct="sw:' + u + '">' + escapeHtml((x.a || '🙂') + ' ' + (x.n || 'Игрок')) + ' · войти</button>'; }).join('') +
       (IS_APP ? '' : '<button class="btn sec" data-acct="google">Войти через Google</button>') + '</div>';
   }
   function acctHide() { var el = document.getElementById('acct'); if (el) el.remove(); }
@@ -1375,7 +1378,8 @@
   document.addEventListener('click', function (e) {
     var b = e.target.closest('[data-acct]'); if (!b) return;
     Sound.init(); Sound.play('click');
-    if (b.getAttribute('data-acct') === 'guest') acctGuest(); else googleLogin();
+    var v = b.getAttribute('data-acct');
+    if (v === 'guest') acctGuest(); else if (v.indexOf('sw:') === 0) switchAcc(v.slice(3)); else googleLogin();
   });
   // вошедшим через Google до появления окна входа окно не показываем
   if (!store.get('acct', null)) { if (googleUser()) store.set('acct', { type: 'google', n: googleUser().n }); else acctShow(); }
@@ -1401,6 +1405,11 @@
       Online.req('PUT', '/profiles/' + me, profileData);
       Online.req('GET', '/bans/' + me, undefined, function (e, v) { banAcc = !e && !!v; setBanned(); });
       Online.req('GET', '/badges/' + me, undefined, function (e, v) { if (!e) myBadges = v || {}; });
+      // аккаунт удалён админом: снимаем метку и начинаем с чистого листа
+      Online.req('GET', '/deleted/' + me, undefined, function (e, v) {
+        if (e || !v) return;
+        Online.req('DELETE', '/deleted/' + me, undefined, function () { forgetAcc(me); wipeLocal(); location.reload(); });
+      });
       // монеты от админа: gifts/{uid}; удаляем, и только если удаление прошло, начисляем — без двойного начисления
       Online.req('GET', '/gifts/' + me, undefined, function (e, g) {
         if (e || !g) return;
@@ -1427,6 +1436,56 @@
     el = document.createElement('div'); el.id = 'banned';
     el.innerHTML = '<div class="acct-card"><h3>🚫 Вы заблокированы</h3><p>Администратор заблокировал ' + (banAcc ? 'этот аккаунт' : 'доступ с этого адреса') + '.</p></div>';
     document.body.appendChild(el);
+  }
+  /* ---------- несколько аккаунтов на устройстве и удаление аккаунта ---------- */
+  // аккаунт = снимок всего localStorage (прогресс, монеты, токен входа); снимки лежат в gbAccounts по uid
+  // ключ строкой, а не переменной: окно входа читает список при запуске, раньше, чем выполняется этот блок
+  var delAsk = 0;
+  function accList() { try { return JSON.parse(localStorage.getItem('gbAccounts')) || {}; } catch (e) { return {}; } }
+  function accSaveList(l) { try { localStorage.setItem('gbAccounts', JSON.stringify(l)); return true; } catch (e) { api.toast('Не хватает памяти, чтобы сохранить аккаунт'); return false; } }
+  function myUid() { return Online.me || (store.get('fbAuth', null) || {}).uid || ''; }
+  function snapshot() { var o = {}; for (var i = 0; i < localStorage.length; i++) { var k = localStorage.key(i); if (k !== 'gbAccounts') o[k] = localStorage.getItem(k); } return o; }
+  function saveCurrentAcc() {
+    var uid = myUid(); if (!uid || !store.get('acct', null)) return true;
+    var l = accList(); l[uid] = { n: deviceName(), a: avatar(), ty: googleUser() ? 'google' : 'guest', t: Date.now(), data: snapshot() };
+    return accSaveList(l);
+  }
+  function wipeLocal() { var keep = localStorage.getItem('gbAccounts'); localStorage.clear(); if (keep) localStorage.setItem('gbAccounts', keep); }
+  function switchAcc(uid) {
+    if (!saveCurrentAcc()) return;
+    var x = accList()[uid]; if (!x) return;
+    wipeLocal(); Object.keys(x.data || {}).forEach(function (k) { localStorage.setItem(k, x.data[k]); });
+    location.reload();
+  }
+  function addAcc() { if (!saveCurrentAcc()) return; wipeLocal(); location.reload(); }
+  function forgetAcc(uid) { var l = accList(); delete l[uid]; accSaveList(l); }
+  function openAccounts() {
+    saveCurrentAcc();
+    var l = accList(), cur = myUid();
+    sheet.classList.remove('profile'); sheet.classList.add('show');
+    $('#setBody').innerHTML = '<h3>🔄 Аккаунты на этом устройстве</h3><div class="plist">' + Object.keys(l).sort(function (a, b) { return l[b].t - l[a].t; }).map(function (u) {
+      var x = l[u], now = u === cur;
+      return '<div class="pg"' + (now ? '' : ' data-accsw="' + u + '"') + '><span class="pm">' + escapeHtml(x.a || '🙂') + '</span><div class="pn"><b>' + escapeHtml(x.n || 'Игрок') + (now ? ' · сейчас' : '') + '</b>' +
+        '<small>' + (x.ty === 'google' ? 'Google' : 'Гость') + (now ? '' : ' · нажми, чтобы войти') + '</small></div>' +
+        (now ? '' : '<button class="btn sec" data-accforget="' + u + '" style="width:auto;margin:0;padding:6px 10px">✕</button>') + '</div>';
+    }).join('') + '</div><button class="btn" data-accadd="1">➕ Добавить аккаунт</button>' +
+      '<div class="note pnote">У каждого аккаунта свой прогресс, монеты и друзья. «✕» убирает аккаунт только с этого устройства, сам аккаунт остаётся.</div>' +
+      '<button class="btn sec" data-set="close">' + t('set.done') + '</button>';
+  }
+  // удаление своего аккаунта: рекорды, ник, профиль, друзья и прочее одним запросом, затем чистое начало
+  function deleteMyAccount() {
+    if (Date.now() - delAsk > 4000) { delAsk = Date.now(); api.toast('⚠️ Нажми ещё раз, чтобы удалить аккаунт навсегда'); return; }
+    Online.auth(function (tok) {
+      if (!tok) { api.toast('Нужен интернет'); return; }
+      var me = Online.me, up = {};
+      ['_nick_0', '_seen_0', '_all_0'].forEach(function (b) { up['lb/' + b + '/' + me] = null; });
+      ORDER.forEach(function (id) { for (var k = 0; k < 4; k++) if (best(id, k) > 0) up['lb/' + id + '_' + k + '/' + me] = null; });
+      ['profiles', 'friends', 'ips', 'gifts', 'freq'].forEach(function (r) { up[r + '/' + me] = null; });
+      Online.req('PATCH', '/', up, function (e) {
+        if (e) { api.toast('Не удалось удалить, попробуй ещё раз'); return; }
+        forgetAcc(me); wipeLocal(); location.reload();
+      });
+    });
   }
   /* ---------- профиль другого игрока и друзья ---------- */
   // дружба взаимная: friends/{я}/{он} и friends/{он}/{я}; заявка лежит в freq/{кому}/{от кого}
@@ -1605,6 +1664,11 @@
     if (pcz) { saveStatus(); store.set('pColor', pcz.getAttribute('data-pcolor')); Sound.play('click'); renderProfile(); renderProfileChip(); return; }
     if (e.target.closest('[data-lbhide]')) { saveStatus(); store.set('lbHide', !store.get('lbHide', false)); Sound.play('click'); renderProfile(); return; }
     if (e.target.closest('[data-gift]')) { claimGift(); return; }
+    if (e.target.closest('[data-accs]')) { Sound.play('click'); openAccounts(); return; }
+    var afz = e.target.closest('[data-accforget]'); if (afz) { forgetAcc(afz.getAttribute('data-accforget')); openAccounts(); return; }
+    var asz = e.target.closest('[data-accsw]'); if (asz) { switchAcc(asz.getAttribute('data-accsw')); return; }
+    if (e.target.closest('[data-accadd]')) { addAcc(); return; }
+    if (e.target.closest('[data-accrm]')) { deleteMyAccount(); return; }
     if (e.target.closest('[data-promo]')) { saveStatus(); redeemPromo(); return; }
     if (e.target.closest('[data-copyid]')) { try { navigator.clipboard.writeText(Online.me || ''); } catch (e2) { } api.toast('ID скопирован'); return; }
     if (e.target.closest('[data-glogin]')) { Sound.play('click'); googleLogin(); return; }

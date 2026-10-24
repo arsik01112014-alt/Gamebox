@@ -11,7 +11,7 @@
           "n"
         ],
         "$uid": {
-          ".write": "auth != null && auth.uid === $uid && !root.child('bans').child(auth.uid).exists() && (!data.exists() || !newData.exists() || newData.child('s').val() >= data.child('s').val())"
+          ".write": "auth != null && (auth.uid === 'ADMIN_UID' || (auth.uid === $uid && !root.child('bans').child(auth.uid).exists() && (!data.exists() || !newData.exists() || newData.child('s').val() >= data.child('s').val())))"
         }
       }
     },
@@ -34,7 +34,7 @@
     "profiles": {
       ".read": "auth != null",
       "$uid": {
-        ".write": "auth != null && auth.uid === $uid && !root.child('bans').child(auth.uid).exists()"
+        ".write": "auth != null && (auth.uid === 'ADMIN_UID' || (auth.uid === $uid && !root.child('bans').child(auth.uid).exists()))"
       }
     },
     "badges": {
@@ -46,12 +46,13 @@
     "friends": {
       ".read": "auth != null",
       "$uid": {
-        ".write": "auth != null && auth.uid === $uid && !root.child('bans').child(auth.uid).exists()"
+        ".write": "auth != null && (auth.uid === 'ADMIN_UID' || (auth.uid === $uid && !root.child('bans').child(auth.uid).exists()))"
       }
     },
     "freq": {
       "$uid": {
         ".read": "auth != null && (auth.uid === $uid || auth.uid === 'ADMIN_UID')",
+        ".write": "auth != null && (auth.uid === $uid || auth.uid === 'ADMIN_UID')",
         "$from": {
           ".write": "auth != null && (auth.uid === $from || auth.uid === $uid) && !root.child('bans').child(auth.uid).exists()"
         }
@@ -60,7 +61,7 @@
     "ips": {
       ".read": "auth != null && auth.uid === 'ADMIN_UID'",
       "$uid": {
-        ".write": "auth != null && auth.uid === $uid"
+        ".write": "auth != null && (auth.uid === $uid || auth.uid === 'ADMIN_UID')"
       }
     },
     "ipbans": {
@@ -91,6 +92,12 @@
         "$uid": {
           ".write": "auth != null && auth.uid === $uid && !data.exists() && !root.child('bans').child(auth.uid).exists()"
         }
+      }
+    },
+    "deleted": {
+      "$uid": {
+        ".read": "auth != null && (auth.uid === $uid || auth.uid === 'ADMIN_UID')",
+        ".write": "auth != null && (auth.uid === 'ADMIN_UID' || (auth.uid === $uid && !newData.exists()))"
       }
     }
   }
