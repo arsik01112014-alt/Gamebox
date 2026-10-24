@@ -13,9 +13,8 @@ python3 - "$WORK/index.html" <<'PY'
 import sys
 p = sys.argv[1]
 s = open(p, encoding='utf-8').read()
-tag = '<script src="js/engine.js"></script>'
-assert s.count(tag) == 1
-s = s.replace(tag, '<script src="/sdk.js"></script>\n<script src="js/yandex.js"></script>\n' + tag)
+i = s.index('<script src=')  # перед первым скриптом: язык должен быть выставлен до загрузки переводов
+s = s[:i] + '<script src="/sdk.js"></script>\n<script src="js/yandex.js"></script>\n' + s[i:]
 open(p, 'w', encoding='utf-8').write(s)
 PY
 rm -f "$OUT"
