@@ -7,7 +7,7 @@
     'stack', 'jumper', 'memory', 'mole', 'simon',
     'asteroids', 'crossy', 'fruit', 'knife', 'tiles', 'bubbles', 'connect4', 'reversi',
     'puzzle15', 'blocks', 'colorjump', 'airhockey', 'racing', 'archery', 'basket', 'maze', 'solitaire', 'yahtzee',
-    'sokoban', 'watersort', 'mahjong', 'gomoku', 'dots', 'bowling', 'minigolf', 'pinball', 'penalty', 'towerdef', 'numbers', 'reflex', 'dodge', 'lights', 'flood', 'hangman', 'nim', 'blackjack', 'guess', 'bulls', 'wordle', 'lines', 'blockblast', 'arrows'].filter(function (id) { return GAMES[id]; });
+    'sokoban', 'watersort', 'mahjong', 'gomoku', 'dots', 'bowling', 'minigolf', 'pinball', 'penalty', 'towerdef', 'numbers', 'reflex', 'dodge', 'lights', 'flood', 'hangman', 'nim', 'blackjack', 'guess', 'bulls', 'wordle', 'lines', 'blockblast', 'arrows', 'catcher', 'aim'].filter(function (id) { return GAMES[id]; });
   var $ = function (s) { return document.querySelector(s); };
 
   /* ---------- хранилище ---------- */
@@ -1194,17 +1194,45 @@
       '<button class="btn" data-set="close">' + t('set.done') + '</button>' +
       '<div class="ver">' + t('set.version') + ' 3.0</div>';
   }
-  var APP_CODE = 19, updInfo = null;
+  var APP_CODE = 31, updInfo = null, updBarHidden = false;
+  // обновление APK: в /app/latest лежит {code, name, notes, url}, админка публикует его кнопкой.
+  // WebView приложения не умеет скачивать файлы сам, поэтому «Скачать» копирует ссылку для браузера
   function checkUpdate() {
     if (IS_APP === false || !Online.ok()) return; // на сайте обновлять APK не нужно
     Online.req('GET', '/app/latest', undefined, function (e, r) {
-      if (e || !r || !(r.code > APP_CODE) || store.get('updSkip', 0) >= r.code) return;
-      updInfo = r; $('#setBody').innerHTML = '<h3>⬇ ' + t('upd.title') + '</h3><p class="note pnote">' + escapeHtml((r.name || '') + ' — ' + (r.notes || '')) + '</p>' +
-        '<p class="note pnote">' + t('upd.how') + '</p><div class="box"><div style="word-break:break-all;user-select:text;-webkit-user-select:text;font-size:12px">' + escapeHtml(r.url || '') + '</div></div>' +
-        '<button class="btn" data-upd="copy">📋 ' + t('upd.copy') + '</button><button class="btn sec" data-upd="skip">' + t('upd.later') + '</button>';
-      sheet.classList.add('show');
+      if (e || !r || !(r.code > APP_CODE)) return;
+      updInfo = r; // не перекрывать окно первого входа
+      (function wait() { if (document.getElementById('acctNick')) setTimeout(wait, 2000); else showUpdate(); })();
     });
   }
+  function copyText(s) {
+    var ta = document.createElement('textarea'); ta.value = s; document.body.appendChild(ta); ta.select();
+    try { document.execCommand('copy'); } catch (e) { } ta.remove();
+    try { navigator.clipboard.writeText(s); } catch (e) { }
+  }
+  function showUpdate() {
+    var el = document.getElementById('updModal') || document.body.appendChild(Object.assign(document.createElement('div'), { id: 'updModal' }));
+    el.innerHTML = '<div class="acct-card upd-card"><button class="upd-x" data-upd2="close">✕</button><h3>🚀 Доступна новая версия ' + escapeHtml(updInfo.name || '') + '</h3>' +
+      (updInfo.notes ? '<p>' + escapeHtml(updInfo.notes) + '</p>' : '') +
+      '<button class="btn" data-upd2="dl">⬇ Скачать</button><div class="upd-link" id="updLink"></div><button class="btn sec" data-upd2="close">Позже</button></div>';
+  }
+  function showUpdBar() {
+    if (updBarHidden || !updInfo) return;
+    var bar = document.getElementById('updBar') || document.body.appendChild(Object.assign(document.createElement('div'), { id: 'updBar' }));
+    bar.innerHTML = '<span>🔔 Доступно обновление ' + escapeHtml(updInfo.name || '') + '</span><button data-upd2="dl">Скачать</button><button data-upd2="bar-x">✕</button>';
+  }
+  document.addEventListener('click', function (e) {
+    var b = e.target.closest('[data-upd2]'); if (!b) return;
+    var a = b.getAttribute('data-upd2');
+    if (a === 'close') { var m = document.getElementById('updModal'); if (m) m.remove(); showUpdBar(); }
+    else if (a === 'bar-x') { updBarHidden = true; var bar = document.getElementById('updBar'); if (bar) bar.remove(); }
+    else if (a === 'dl' && updInfo) {
+      copyText(updInfo.url || '');
+      var l = document.getElementById('updLink');
+      if (l) l.innerHTML = 'Ссылка скопирована. Откройте браузер, вставьте её в адресную строку и скачайте новую версию.<br><b>' + escapeHtml(updInfo.url || '') + '</b>';
+      else api.toast('Ссылка скопирована — вставьте её в браузере и скачайте обновление');
+    }
+  });
   setTimeout(checkUpdate, 4000);
   var lbDiff = 1;
   function renderLb(id, d, rows, me, err) {

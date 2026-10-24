@@ -5,7 +5,7 @@ name: GameBox site
 on:
   push:
     branches: [main]
-    paths: ['assets/**', '.github/workflows/pages.yml']
+    paths: ['assets/**', 'releases/**', '.github/workflows/pages.yml']
   workflow_dispatch:
 
 permissions:
@@ -26,6 +26,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/configure-pages@v5
+      # APK и страница загрузки: releases/ публикуется как /download/
+      - name: Download page
+        run: if [ -d releases ]; then cp -r releases assets/download; fi
       # номер версии в ссылках на js/css: иначе браузер показывает старые файлы из кэша
       - name: Cache busting
         run: sed -i -E "s#(src|href)=\"((js|css)/[^\"?]+)\"#\1=\"\2?v=${GITHUB_SHA::8}\"#g" assets/index.html

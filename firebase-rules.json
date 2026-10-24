@@ -1,7 +1,8 @@
 {
   "rules": {
     "app": {
-      ".read": true
+      ".read": true,
+      ".write": "auth != null && auth.uid === 'ADMIN_UID'"
     },
     "lb": {
       ".read": "auth != null",

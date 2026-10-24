@@ -585,3 +585,14 @@ html, body { font-family: "Inter", system-ui, -apple-system, "Segoe UI", Roboto,
 .bdg-admin{background:#dc2626;color:#fff}.bdg-moder{background:#ea580c;color:#fff}.bdg-tester{background:#0891b2;color:#fff}
 .bdg-vip{background:linear-gradient(135deg,#8b5cf6,#ec4899);color:#fff}.bdg-verified{background:#16a34a;color:#fff}
 [data-player]{cursor:pointer}
+
+/* окно и напоминание об обновлении приложения */
+#updModal{position:fixed;inset:0;z-index:9998;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(2,6,23,.85)}
+.upd-card{position:relative}
+.upd-x{position:absolute;top:10px;right:10px;width:34px;height:34px;border-radius:50%;border:0;background:rgba(148,163,184,.25);color:#fff;font-size:16px;cursor:pointer}
+.upd-link{font-size:13px;color:#cbd5e1;word-break:break-all;user-select:text;-webkit-user-select:text}
+.upd-link:empty{display:none}
+#updBar{position:fixed;left:8px;right:8px;top:8px;z-index:9997;display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:14px;background:linear-gradient(135deg,#7c5cff,#ec4899);color:#fff;font-weight:700;font-size:14px;box-shadow:0 8px 24px rgba(0,0,0,.4)}
+#updBar span{flex:1}
+#updBar button{border:0;border-radius:10px;padding:6px 10px;font-weight:800;background:#fff;color:#3b1d8f;cursor:pointer}
+#updBar button:last-child{background:rgba(255,255,255,.25);color:#fff}
