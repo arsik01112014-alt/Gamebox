@@ -100,7 +100,10 @@ window.GAMES.runner = {
         // предметы — от дальних к ближним
         items.slice().sort(function (p, q) { return q.z - p.z; }).forEach(function (o) {
           if (o.z > FAR) return;
-          var p = proj(o.l, o.z), s = p.s, w = W * 0.25 * s;
+          // то, что уже проехало за спину, не рисуем: у камеры оно раздувается на весь экран
+          var zn = o.k === 'train' ? Math.max(o.z, -30) : o.z;
+          if (zn < -30 || (o.k === 'train' && o.z + o.len < -30)) return;
+          var p = proj(o.l, zn), s = p.s, w = W * 0.25 * s;
           if (o.k === 'coin') {
             var sw = Math.abs(Math.cos(t * 5 + o.z * 0.01));
             c.fillStyle = '#facc15'; c.beginPath(); c.ellipse(p.x, p.y - 40 * s, 14 * s * sw + 2 * s, 14 * s, 0, 0, 6.283); c.fill();
@@ -112,7 +115,7 @@ window.GAMES.runner = {
             c.fillStyle = '#334155'; c.fillRect(p.x - w / 2, p.y - 110 * s, 6 * s, 110 * s); c.fillRect(p.x + w / 2 - 6 * s, p.y - 110 * s, 6 * s, 110 * s);
             c.fillStyle = '#ef4444'; c.fillRect(p.x - w / 2, p.y - 110 * s, w, 26 * s); c.fillStyle = '#fff'; c.fillRect(p.x - w / 2 + 6 * s, p.y - 100 * s, w - 12 * s, 6 * s);
           } else if (o.k === 'train') {
-            var e = proj(o.l, o.z + o.len), we = W * 0.25 * e.s;
+            var e = proj(o.l, Math.min(FAR, o.z + o.len)), we = W * 0.25 * e.s;
             c.fillStyle = '#991b1b'; c.beginPath(); c.moveTo(e.x - we / 2, e.y - 150 * e.s); c.lineTo(e.x + we / 2, e.y - 150 * e.s); c.lineTo(p.x + w / 2, p.y - 150 * s); c.lineTo(p.x - w / 2, p.y - 150 * s); c.fill();
             c.fillStyle = '#dc2626'; c.fillRect(p.x - w / 2, p.y - 150 * s, w, 150 * s);
             c.fillStyle = '#bae6fd'; c.fillRect(p.x - w / 2 + 8 * s, p.y - 136 * s, w - 16 * s, 40 * s);
