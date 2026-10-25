@@ -20,6 +20,15 @@ window.GAMES.basket = {
   create: function (api) {
     var DIFF = [{ time: 60, move: 0 }, { time: 45, move: 0.5 }, { time: 40, move: 1 }, { time: 30, move: 1.6 }];
     var D, ball, hoop, timeLeft, t, endT, made, streak, drag, flying, rimHit, R, G, net, msg, msgT;
+    // бросок по свайпу: направление свайпа — куда летит мяч, длина — высота дуги относительно кольца
+    function plan(dx, dy) {
+      var k = Math.min(1.6, Math.hypot(dx, dy) / 260), sy = ball.y;
+      var apex = Math.max(R + 10, hoop.y - 40 - (k - 0.75) * 260);
+      var vy = -Math.sqrt(2 * G * Math.max(20, sy - apex)), tUp = -vy / G;
+      var tDown = apex < hoop.y ? Math.sqrt(2 * (hoop.y - apex) / G) : tUp;
+      var T = tUp + tDown, tx = ball.x + dx / Math.max(30, -dy) * (sy - hoop.y) * 0.9;
+      return { vx: (tx - ball.x) / T, vy: vy, T: T, k: k };
+    }
     function newBall() { ball = { x: api.W / 2, y: api.H - 90, vx: 0, vy: 0, r: R, rot: 0, z: 1 }; flying = false; rimHit = false; }
     function placeHoop() {
       hoop.baseX = api.W * (0.3 + Math.random() * 0.4); hoop.x = hoop.baseX;
@@ -179,8 +188,8 @@ window.GAMES.basket = {
           var dx = d.x - drag.x, dy = d.y - drag.y;
           drag = null;
           if (dy > -30) return;
-          var k = Math.min(1.6, Math.hypot(dx, dy) / 260);
-          ball.vy = -900 - 520 * k; ball.vx = dx * 2.2;
+          var pl = plan(dx, dy);
+          ball.vy = pl.vy; ball.vx = pl.vx; ball.T = pl.T; ball.el = 0; ball.spin = -6 - pl.k * 4;
           flying = true; ball.peak = false; api.sound('jump');
         }
       },
@@ -193,9 +202,9 @@ window.GAMES.basket = {
         var n = 4;
         for (var i = 0; i < n; i++) {
           var h = dt / n, py = ball.y;
-          ball.vy += G * h; ball.x += ball.vx * h; ball.y += ball.vy * h; ball.rot += ball.vx * h * 0.02;
+          ball.vy += G * h; ball.x += ball.vx * h; ball.y += ball.vy * h; ball.rot += (ball.spin || 0) * h; ball.el = (ball.el || 0) + h;
           if (ball.vy > 0) ball.peak = true;
-          ball.z = Math.max(0.62, ball.z - h * 0.5);
+          ball.z = 1 - 0.38 * Math.min(1, ball.el / (ball.T || 1)); // мяч удаляется к кольцу
           var r = R * ball.z;
           // дужки кольца — только на спуске (мяч «за» кольцом на подъёме)
           if (ball.peak) {
@@ -238,7 +247,7 @@ window.GAMES.basket = {
         c.beginPath(); c.moveTo(hoop.x - bw * 0.32 + 1, by + 2); c.lineTo(hoop.x - bw * 0.12 + 1, 0); c.moveTo(hoop.x + bw * 0.32 - 1, by + 2); c.lineTo(hoop.x + bw * 0.12 - 1, 0); c.stroke();
         c.lineCap = 'butt';
         c.drawImage(boardC, bx - 10, by - 10, bw + 20, bh + 26);
-        var r = R * ball.z, behind = flying && !ball.peak;
+        var r = R * ball.z, behind = flying && ball.peak && ball.el >= (ball.T || 0) * 0.8 && ball.y < hoop.y + hoop.w; // на спуске мяч уже у кольца — за передней дужкой
         // тень мяча на полу
         var restY = api.H - 90 + R * 0.92, zk = (ball.z - 0.62) / 0.38;
         var shY = FT + 14 + (restY - FT - 14) * Math.max(0, Math.min(1, zk)), hgt = Math.max(0, shY - ball.y - r);
@@ -248,9 +257,9 @@ window.GAMES.basket = {
         if (drag && drag.cx !== undefined && !flying) {
           var adx = drag.cx - drag.x, ady = drag.cy - drag.y;
           if (ady < -30) {
-            var kk = Math.min(1.6, Math.hypot(adx, ady) / 260), avy = -900 - 520 * kk, avx = adx * 2.2;
+            var pl2 = plan(adx, ady), kk = pl2.k, avy = pl2.vy, avx = pl2.vx;
             for (i = 1; i <= 14; i++) {
-              var tt = i * 0.045, ax = ball.x + avx * tt, ay = ball.y + avy * tt + G * tt * tt / 2;
+              var tt = i * pl2.T / 18, ax = ball.x + avx * tt, ay = ball.y + avy * tt + G * tt * tt / 2;
               c.fillStyle = 'rgba(255,255,255,' + (0.85 - i * 0.05) + ')';
               c.beginPath(); c.arc(ax, ay, Math.max(1.2, 4 - i * 0.2), 0, 6.283); c.fill();
             }

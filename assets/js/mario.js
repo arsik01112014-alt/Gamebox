@@ -195,7 +195,7 @@ window.GAMES.mario = {
     function spawnEnemies() {
       enemies = ents0.map(function (e) {
         var k = e.type === 'koopa';
-        return { type: e.type, x: e.x, y: k ? 11.7 : e.y, w: 0.85, h: k ? 1.2 : 0.85, vx: -D.espeed * (k ? 0.8 : 1) * Math.min(1.5, 1 + (level - 1) * 0.06), vy: 0, alive: true, active: false, dead: 0, flip: false };
+        return { type: e.type, x: e.x, y: k ? 11.7 : e.y, w: 0.85, h: k ? 1.2 : 0.85, vx: -D.espeed * (k ? 0.8 : 1) * Math.min(1.5, 1 + (level - 1) * 0.06), vy: 0, alive: true, active: false, dead: 0, flip: false, kickT: 0 };
       });
     }
 
