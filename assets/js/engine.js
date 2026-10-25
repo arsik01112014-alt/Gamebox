@@ -652,12 +652,15 @@
       if (this.test) { var tu = store.get('fbTestUid', ''); if (!tu) { tu = 'u' + Math.random().toString(36).slice(2, 10); store.set('fbTestUid', tu); } this.me = tu; cb('test'); return; }
       var a = store.get('fbAuth', null);
       if (a && a.tok && a.exp > Date.now() + 60000) { this.me = a.uid; cb(a.tok); return; }
+      // вход уже идёт — ждём его, иначе одновременные запросы создают несколько анонимных аккаунтов (двойные профили)
+      if (this.authQ) { this.authQ.push(cb); return; }
+      this.authQ = [cb]; var outer = cb; cb = function (tok) { var q = self.authQ || [outer]; self.authQ = null; q.forEach(function (f) { try { f(tok); } catch (e) { } }); };
       var refresh = a && a.rt, url, body, ct;
       if (refresh) { url = 'https://securetoken.googleapis.com/v1/token?key=' + FB.key; body = 'grant_type=refresh_token&refresh_token=' + encodeURIComponent(a.rt); ct = 'application/x-www-form-urlencoded'; }
       else { url = 'https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=' + FB.key; body = '{"returnSecureToken":true}'; ct = 'application/json'; }
       fetch(url, { method: 'POST', headers: { 'Content-Type': ct }, body: body }).then(function (r) { return r.json(); }).then(function (j) {
         var tok = j.idToken || j.id_token, uid = j.localId || j.user_id;
-        if (!tok) { if (refresh) { store.set('fbAuth', null); self.auth(cb); } else cb(null); return; }
+        if (!tok) { if (refresh) { store.set('fbAuth', null); var q0 = self.authQ; self.authQ = null; self.auth(function (t2) { (q0 || []).forEach(function (f) { try { f(t2); } catch (e) { } }); }); } else cb(null); return; }
         store.set('fbAuth', { tok: tok, rt: j.refreshToken || j.refresh_token, uid: uid, exp: Date.now() + (+(j.expiresIn || j.expires_in) || 3600) * 1000 });
         self.me = uid; cb(tok);
       }).catch(function () { cb(null); });
@@ -1257,7 +1260,7 @@
       '<button class="btn" data-set="close">' + t('set.done') + '</button>' +
       '<div class="ver">' + t('set.version') + ' 3.0</div>';
   }
-  var APP_CODE = 43, updInfo = null, updBarHidden = false;
+  var APP_CODE = 44, updInfo = null, updBarHidden = false;
   // обновление APK: в /app/latest лежит {code, name, notes, url}, админка публикует его кнопкой.
   // WebView приложения не умеет скачивать файлы сам, поэтому «Скачать» копирует ссылку для браузера
   function checkUpdate() {
@@ -1363,8 +1366,10 @@
       var app = m[0].getApps().length ? m[0].getApp() : m[0].initializeApp({ apiKey: FB.key, authDomain: 'gamebox-73da2.firebaseapp.com', databaseURL: FB.db, projectId: 'gamebox-73da2' });
       return m[1].signInWithPopup(m[1].getAuth(app), new m[1].GoogleAuthProvider());
     }).then(function (res) {
-      var u = res.user;
+      var u = res.user, old = store.get('fbAuth', null), first = !store.get('acct', null);
       return u.getIdToken().then(function (tok) {
+        // первый вход через Google: гостевой профиль, созданный до входа, больше не нужен — удаляем его, чтобы не было двойника
+        if (first && old && old.uid && old.uid !== u.uid && old.tok) ['lb/_seen_0', 'profiles', 'ips'].forEach(function (r) { fetch(FB.db + '/' + r + '/' + old.uid + '.json?auth=' + encodeURIComponent(old.tok), { method: 'DELETE' }).catch(function () { }); });
         store.set('fbAuth', { tok: tok, rt: u.refreshToken, uid: u.uid, exp: Date.now() + 3300000 });
         Online.me = u.uid;
         store.set('gUser', { n: (u.displayName || u.email || 'Google').slice(0, 16) });

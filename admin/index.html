@@ -318,7 +318,9 @@ function render() {
       '<h2>Популярные игры (игроков с рекордом)</h2>' + topG.map(function (g) {
         return '<div class="row"><div class="m"><b>' + esc(g) + '</b><div style="height:8px;border-radius:4px;background:rgba(255,255,255,.1);margin-top:6px"><div style="height:8px;border-radius:4px;width:' + Math.round(games[g] / maxG * 100) + '%;background:linear-gradient(90deg,#22c55e,#facc15)"></div></div></div><b>' + games[g] + '</b></div>';
       }).join('') +
-      '<button class="sec" data-act="export" style="width:100%;margin-top:12px">📋 Скопировать список игроков (CSV)</button>';
+      '<button class="sec" data-act="export" style="width:100%;margin-top:12px">📋 Скопировать список игроков (CSV)</button>' +
+      '<h2>🧹 Пустые профили</h2><div class="row" style="display:block"><p class="note" style="margin-top:0">Найдено: ' + emptyProfiles().length + '. Это профили без ника (Player-…), без партий и рекордов — двойники, которые появлялись при первом запуске игры до версии 4.4.</p>' +
+      '<button class="amber" data-act="clean" style="width:100%"' + (emptyProfiles().length ? '' : ' disabled') + '>Удалить пустые профили</button></div>';
   } else {
     var rules = RULES.split('ADMIN_UID').join(me || 'ADMIN_UID');
     v.innerHTML = updHtml() + '<h2>Твой ID админа</h2><div class="row"><div class="m"><b>' + esc(me || 'нет связи') + '</b></div><button class="sec" data-act="copy-id">Копировать</button></div>' +
@@ -375,6 +377,9 @@ function openPlayer(uid) {
     '<button class="' + (p.noads ? 'green' : 'sec') + '" data-act="noads" data-on="' + (p.noads ? 1 : 0) + '" style="grid-column:1 / -1">' + (p.noads ? '✓ Реклама отключена · включить' : '📺 Отключить рекламу этому игроку') + '</button>' +
     '<button class="red" data-act="delacc" style="grid-column:1 / -1">🗑 Удалить аккаунт</button><button class="sec" data-act="copy-uid">Копировать ID</button><button class="sec" data-act="hide">Закрыть</button></div>';
   $('#modal').classList.add('show');
+}
+function emptyProfiles() {
+  return (D ? D.players : []).filter(function (p) { var pr = p.pr || {}; return !p.on && !p.nick && !p.games && !(+pr.pl) && /^(Player-\d+|)$/.test(p.n || '') && !p.ban && !(p.b && Object.keys(p.b).length); });
 }
 function recordsHtml(uid) {
   var rows = [];
@@ -458,6 +463,12 @@ document.addEventListener('click', function (e) {
   }
   else if (a === 'maint-off') act(req('DELETE', '/app/maint'), 'Техработы выключены');
   else if (a === 'export') copy('id;ник;тип;последний заход;уровень;партий;монет;ip\n' + D.players.map(function (q) { var pr = q.pr || {}; return [q.u, q.n, q.ty, q.s ? new Date(q.s).toLocaleString('ru-RU') : '', pr.lv || '', pr.pl || '', pr.co || '', q.ip].join(';'); }).join('\n'));
+  else if (a === 'clean') {
+    var E = emptyProfiles(); if (!E.length) return;
+    if (Date.now() - (window.clAsk || 0) > 4000) { window.clAsk = Date.now(); toast('Нажми ещё раз: удалить ' + E.length + ' пустых профилей'); return; }
+    var up = {}; E.forEach(function (p) { up['lb/_seen_0/' + p.u] = null; up['profiles/' + p.u] = null; up['ips/' + p.u] = null; });
+    act(req('PATCH', '/', up), 'Удалено профилей: ' + E.length);
+  }
   else if (a === 'chat-back') { chatUid = null; render(); }
   else if (a === 'chat-q') { $('#cr').value = id; $('#cr').focus(); }
   else if (a === 'chat-send') {

@@ -101,3 +101,16 @@
 .sup-in{display:flex;gap:8px;padding:10px 12px 14px;border-top:1px solid rgba(148,163,184,.15)}
 .sup-in textarea{flex:1;resize:none;border-radius:18px;border:1px solid #334155;background:#1e293b;color:#fff;padding:11px 14px;font:inherit;font-size:15px;max-height:110px}
 .sup-in .btn{width:48px;height:46px;margin:0;padding:0;border-radius:50%;font-size:18px;flex:none}
+
+/* компактная верхняя панель в игре (для всех стилей): одна строка ~44px */
+#game .hud { gap:6px !important; padding:4px 8px !important; padding-top:max(4px, env(safe-area-inset-top)) !important; min-height:0 !important; }
+#game .hud .icon-btn { width:34px !important; height:34px !important; border-radius:10px !important; flex:none; }
+#game .hud .icon-btn svg { width:18px !important; height:18px !important; }
+#game .hud-mid { display:flex !important; align-items:center; justify-content:center; gap:8px; min-width:0; }
+#game .hud-title { font-size:10px !important; letter-spacing:1.2px !important; max-width:55%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; line-height:1.2 !important; }
+#game .hud-title .hd { font-size:8px !important; padding:1px 5px !important; }
+#game .hud-score { font-size:21px !important; line-height:1 !important; }
+#game .hud-best { display:flex !important; align-items:center; gap:4px; padding:3px 8px !important; border-radius:10px !important; line-height:1 !important; }
+#game .hud-best span { display:none !important; }
+#game .hud-best::before { content:'🏆'; font-size:12px; }
+#game .hud-best b { display:inline !important; font-size:14px !important; }
