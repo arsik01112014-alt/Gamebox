@@ -12,6 +12,14 @@ window.GAMES.wordduel = {
     var WORDS = ['КОМПОТ', 'ЖИРАФ', 'ПАРАШЮТ', 'ЧЕМОДАН', 'ВЕРТОЛЁТ', 'АПЕЛЬСИН', 'ГИТАРА', 'ПИНГВИН', 'КАРАНДАШ', 'ВУЛКАН', 'РАКЕТА', 'ФУТБОЛ', 'ШОКОЛАД', 'ДИНОЗАВР',
       'ЛАБИРИНТ', 'МАЯК', 'ПОДСОЛНУХ', 'КРОКОДИЛ', 'СНЕГОВИК', 'ТЕЛЕСКОП', 'БАРАБАН', 'ВЕЛОСИПЕД', 'КЕНГУРУ', 'КАКТУС', 'ОСЬМИНОГ', 'ПЫЛЕСОС', 'РЮКЗАК', 'ЧЕРЕПАХА'].map(function (w) { return w.replace('Ё', 'Е'); });
     var FREQ = 'ОЕАИНТСРВЛКМДПУЯЫЬГЗБЧЙХЖШЮЦЩЭФЪ';
+    // словарь подгружается только для этой игры (2 МБ): загаданное слово должно быть настоящим
+    function dict() {
+      if (window.RU_SET) return window.RU_SET;
+      if (window.RU_WORDS) { window.RU_SET = new Set(window.RU_WORDS.split('\n')); window.RU_WORDS = null; return window.RU_SET; }
+      if (!window.RU_LOADING) { window.RU_LOADING = true; var sc = document.createElement('script'); sc.src = 'js/data/ru-words.js'; sc.onerror = function () { window.RU_LOADING = false; }; document.head.appendChild(sc); }
+      return null;
+    }
+    dict();
     var round, roles, word, used, wrong, phase, phaseT, typed, scores, netQ, endT, t, aiT, msg;
     function names() { return api.mode === 1 ? [api.t('g.p1'), api.t('g.p2')] : api.mode === 2 ? [api.t('g.you'), api.t('net.opp')] : [api.t('g.you'), api.t('g.cpu')]; }
     // кто загадывает в раунде: чётные раунды — игрок 2 (соперник), нечётные — игрок 1
@@ -69,7 +77,8 @@ window.GAMES.wordduel = {
         var g = geom(), c = Math.floor((d.x - g.x0) / g.cell), r = Math.floor((d.y - g.y0) / g.kh);
         if (c < 0 || c >= PER || r < 0 || r > 3) return;
         if (phase === 'type') {
-          if (r === 3) { if (c < PER / 2) typed = typed.slice(0, -1); else if (typed.length >= 3) setWord(typed); else { msg = 'Минимум 3 буквы'; phaseT = 0; } api.sound('click'); return; }
+          if (r === 3) { if (c < PER / 2) typed = typed.slice(0, -1); else if (typed.length < 3) { msg = 'Минимум 3 буквы'; phaseT = 0; }
+            else { var D = dict(); if (!D) { msg = 'Словарь загружается, нажми ещё раз через секунду'; phaseT = 0; } else if (!D.has(typed)) { msg = 'Такого слова нет в словаре'; phaseT = 0; api.sound('hit'); api.vibrate(40); } else setWord(typed); } api.sound('click'); return; }
           var ch = ALPHA[r * PER + c]; if (ch && typed.length < 12) { typed += ch; api.sound('click'); }
         } else if (phase === 'guess' && iAmGuesser() && !(api.mode === 0 && guesser() === 1) && r < 3) { var ch2 = ALPHA[r * PER + c]; if (ch2) guess(ch2); }
       },
@@ -99,10 +108,11 @@ window.GAMES.wordduel = {
           K.toast(c, W, midY - 40, msg, 1); c.fillStyle = '#fde68a'; c.font = '900 30px system-ui'; c.fillText(txt, W / 2, midY + 10); return;
         }
         if (phase === 'type') {
-          c.fillStyle = '#f0fdfa'; c.font = '800 17px system-ui'; c.fillText((api.mode === 1 ? n[setter()] + ', загадай' : 'Загадай') + ' слово (соперник не смотрит!)', W / 2, midY - 50);
+          c.fillStyle = '#f0fdfa'; c.font = '800 18px system-ui'; c.fillText((api.mode === 1 ? n[setter()] + ', загадай' : 'Загадай') + ' слово', W / 2, midY - 62);
+          c.fillStyle = 'rgba(204,251,241,.7)'; c.font = '600 13px system-ui'; c.fillText('соперник не смотрит! · только настоящие слова', W / 2, midY - 40);
           K.rr(c, 20, midY - 26, W - 40, 56, 16); c.fillStyle = 'rgba(0,0,0,.35)'; c.fill();
           c.fillStyle = '#fff'; c.font = '900 28px system-ui'; c.fillText(typed.split('').join(' ') || '…', W / 2, midY + 2);
-          if (msg && phaseT < 2) K.toast(c, W, midY + 56, msg, 1);
+          if (msg && phaseT < 2.5) K.toast(c, W, midY + 56, msg, 1);
         } else if (phase === 'pass') {
           c.fillStyle = '#fde68a'; c.font = '900 22px system-ui'; c.fillText('Слово загадано 🤫', W / 2, midY - 20);
           c.fillStyle = '#ccfbf1'; c.font = '700 16px system-ui'; c.fillText('Передай телефон: ' + n[guesser()] + ' угадывает', W / 2, midY + 16); c.fillText('Нажми на экран', W / 2, midY + 40);

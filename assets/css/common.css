@@ -89,7 +89,7 @@
   background:linear-gradient(135deg,#7c5cff,#ec4899);color:#fff;box-shadow:0 8px 22px rgba(0,0,0,.35),inset 0 1px 0 rgba(255,255,255,.35)}
 #supBtn i{position:absolute;top:2px;right:2px;width:14px;height:14px;border-radius:50%;background:#ef4444;border:2px solid #fff;display:none}
 #supBtn.dot i{display:block}
-#supModal{position:fixed;inset:0;z-index:9990;display:flex;align-items:flex-end;justify-content:center;background:rgba(2,6,23,.6)}
+#supModal{position:fixed;inset:0;z-index:10002;display:flex;align-items:flex-end;justify-content:center;background:rgba(2,6,23,.6)}
 .sup-card{width:100%;max-width:480px;height:min(78vh,640px);display:flex;flex-direction:column;background:#0f172a;color:#f8fafc;border-radius:22px 22px 0 0;box-shadow:0 -10px 30px rgba(0,0,0,.4);padding-bottom:env(safe-area-inset-bottom)}
 .sup-h{display:flex;align-items:center;justify-content:space-between;padding:16px 16px 10px;font-size:18px;position:relative}
 .sup-h .upd-x{position:static}

@@ -1260,7 +1260,7 @@
       '<button class="btn" data-set="close">' + t('set.done') + '</button>' +
       '<div class="ver">' + t('set.version') + ' 3.0</div>';
   }
-  var APP_CODE = 44, updInfo = null, updBarHidden = false;
+  var APP_CODE = 45, updInfo = null, updBarHidden = false;
   // обновление APK: в /app/latest лежит {code, name, notes, url}, админка публикует его кнопкой.
   // WebView приложения не умеет скачивать файлы сам, поэтому «Скачать» копирует ссылку для браузера
   function checkUpdate() {
@@ -1505,7 +1505,7 @@
       var me = Online.me;
       Online.req('PUT', '/lb/_seen_0/' + me, function () { return { s: { '.sv': 'timestamp' }, n: deviceName().slice(0, 16), a: avatar(), t: { '.sv': 'timestamp' } }; });
       Online.req('PUT', '/profiles/' + me, profileData);
-      Online.req('GET', '/bans/' + me, undefined, function (e, v) { banAcc = !e && !!v; setBanned(); });
+      Online.req('GET', '/bans/' + me, undefined, function (e, v) { banInfo = v || null; banAcc = !e && !!v && !(v.until && v.until < Date.now()); setBanned(); }); // until — временный бан
       Online.req('GET', '/badges/' + me, undefined, function (e, v) { if (!e) myBadges = v || {}; });
       Online.req('GET', '/noads/' + me, undefined, function (e, v) { noAds = !e && !!v; }); // админ отключил рекламу этому игроку
       checkApp(); supCheck();
@@ -1598,6 +1598,7 @@
     });
   }
   supBtn.addEventListener('click', function () { Sound.init(); Sound.play('click'); supShow(); });
+  document.addEventListener('click', function (e) { if (e.target.closest('[data-ban-sup]')) supShow(); }); // забаненный может обжаловать
   document.addEventListener('click', function (e) {
     var b = e.target.closest('[data-sup]'), m = document.getElementById('supModal');
     if ((b && b.getAttribute('data-sup') === 'close') || (m && e.target === m)) { if (m) m.remove(); supOpen = false; return; }
@@ -1607,7 +1608,7 @@
   function supCheck() { // ответ поддержки: точка на кнопке и уведомление
     Online.req('GET', '/support/' + Online.me + '/meta/uu', undefined, function (e, v) {
       if (e) return;
-      if (v && !supUnread && !supOpen) { api.toast('💬 Поддержка ответила — нажми на кнопку чата'); Sound.play('bonus'); }
+      if (v && !supUnread && !supOpen) { api.toast('💬 Новое сообщение от администрации — нажми на кнопку чата'); Sound.play('bonus'); }
       supUnread = !!v; if (v && supOpen) supLoad();
     });
   }
@@ -1629,12 +1630,17 @@
     });
   }
   function checkIpBan() { Online.req('GET', '/ipbans/' + ipKey(myIp), undefined, function (e, v) { banIp = !e && !!v; setBanned(); }); }
+  var banInfo = null;
   function setBanned() {
     var on = banAcc || banIp, el = document.getElementById('banned');
     if (!on) { if (el) el.remove(); return; }
-    if (el) return;
+    if (el) el.remove();
     el = document.createElement('div'); el.id = 'banned';
-    el.innerHTML = '<div class="acct-card"><h3>🚫 Вы заблокированы</h3><p>Администратор заблокировал ' + (banAcc ? 'этот аккаунт' : 'доступ с этого адреса') + '.</p></div>';
+    var bi = banAcc && banInfo ? banInfo : {};
+    el.innerHTML = '<div class="acct-card"><h3>🚫 Вы заблокированы</h3><p>Администратор заблокировал ' + (banAcc ? 'этот аккаунт' : 'доступ с этого адреса') + '.</p>' +
+      (bi.why ? '<p>Причина: ' + escapeHtml(bi.why) + '</p>' : '') +
+      '<p>' + (bi.until ? 'Бан закончится ' + new Date(bi.until).toLocaleString('ru-RU', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' }) : 'Бан бессрочный') + '</p>' +
+      '<p style="font-size:13px;opacity:.75">Не согласен? Напиши в поддержку — кнопка ниже.</p><button class="btn" data-ban-sup="1">💬 Написать в поддержку</button></div>';
     document.body.appendChild(el);
   }
   /* ---------- несколько аккаунтов на устройстве и удаление аккаунта ---------- */
