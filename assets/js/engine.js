@@ -7,7 +7,7 @@
     'stack', 'jumper', 'memory', 'mole', 'simon',
     'asteroids', 'crossy', 'fruit', 'knife', 'tiles', 'bubbles', 'connect4', 'reversi',
     'puzzle15', 'blocks', 'colorjump', 'airhockey', 'racing', 'archery', 'basket', 'maze', 'solitaire', 'yahtzee',
-    'sokoban', 'watersort', 'mahjong', 'gomoku', 'dots', 'bowling', 'minigolf', 'pinball', 'penalty', 'towerdef', 'numbers', 'reflex', 'dodge', 'lights', 'flood', 'hangman', 'nim', 'blackjack', 'guess', 'bulls', 'wordle', 'lines', 'blockblast', 'arrows', 'catcher', 'aim', 'clicker', 'dash', 'bricks', 'durak', 'flow', 'twocars', 'zigzag'].filter(function (id) { return GAMES[id]; });
+    'sokoban', 'watersort', 'mahjong', 'gomoku', 'dots', 'bowling', 'minigolf', 'pinball', 'penalty', 'towerdef', 'numbers', 'reflex', 'dodge', 'lights', 'flood', 'hangman', 'nim', 'blackjack', 'guess', 'bulls', 'wordle', 'lines', 'blockblast', 'arrows', 'catcher', 'aim', 'clicker', 'dash', 'bricks', 'durak', 'flow', 'twocars', 'zigzag', 'mill', 'ugolki', 'rps', 'duel', 'tron'].filter(function (id) { return GAMES[id]; });
   var $ = function (s) { return document.querySelector(s); };
 
   /* ---------- хранилище ---------- */
@@ -1257,7 +1257,7 @@
       '<button class="btn" data-set="close">' + t('set.done') + '</button>' +
       '<div class="ver">' + t('set.version') + ' 3.0</div>';
   }
-  var APP_CODE = 40, updInfo = null, updBarHidden = false;
+  var APP_CODE = 41, updInfo = null, updBarHidden = false;
   // обновление APK: в /app/latest лежит {code, name, notes, url}, админка публикует его кнопкой.
   // WebView приложения не умеет скачивать файлы сам, поэтому «Скачать» копирует ссылку для браузера
   function checkUpdate() {
