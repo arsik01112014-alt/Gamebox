@@ -114,3 +114,4 @@
 #game .hud-best span { display:none !important; }
 #game .hud-best::before { content:'🏆'; font-size:12px; }
 #game .hud-best b { display:inline !important; font-size:14px !important; }
+.bkcode{margin:10px 0;padding:14px;border-radius:14px;text-align:center;font:900 26px/1 ui-monospace,Menlo,monospace;letter-spacing:2px;background:rgba(0,0,0,.3);border:1.5px dashed rgba(250,204,21,.6);color:#fde68a;user-select:all;-webkit-user-select:all}

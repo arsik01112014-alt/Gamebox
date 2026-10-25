@@ -123,6 +123,13 @@
     "adminNotes": {
       ".read": "auth != null && auth.uid === 'ADMIN_UID'",
       ".write": "auth != null && auth.uid === 'ADMIN_UID'"
+    },
+    "xfer": {
+      "$code": {
+        ".read": "auth != null",
+        ".write": "auth != null && (!data.exists() || !newData.exists())",
+        ".validate": "!newData.exists() || (newData.child('d').isString() && newData.child('d').val().length < 300000)"
+      }
     }
   }
 }

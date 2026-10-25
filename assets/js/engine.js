@@ -1255,12 +1255,12 @@
         '<div class="note">' + (Music.pick >= 0 ? t('track.' + Music.pick) : t('track.autoNote')) + '</div></div>' : '') +
       toggleHtml('vibro', vibroOn) +
       '<div class="sec">' + t('set.secData') + '</div>' +
-      '<button class="row" data-bk="open"><span class="rl"><em>💾</em>' + t('bk.title') + '</span><span>›</span></button>' +
+      '<button class="row" data-bk="open"><span class="rl"><em>💾</em>Перенос прогресса</span><span>›</span></button>' +
       '<button class="row danger" data-set="reset"><span class="rl"><em>' + SET_IC.reset + '</em>' + (resetArmed ? t('set.resetAsk') : t('set.reset')) + '</span><span>⟲</span></button>' +
       '<button class="btn" data-set="close">' + t('set.done') + '</button>' +
-      '<div class="ver">' + t('set.version') + ' 3.0</div>';
+      '<div class="ver">' + t('set.version') + ' ' + APP_NAME + '</div>';
   }
-  var APP_CODE = 45, updInfo = null, updBarHidden = false;
+  var APP_NAME = '4.6', APP_CODE = 46, updInfo = null, updBarHidden = false;
   // обновление APK: в /app/latest лежит {code, name, notes, url}, админка публикует его кнопкой.
   // WebView приложения не умеет скачивать файлы сам, поэтому «Скачать» копирует ссылку для браузера
   function checkUpdate() {
@@ -1802,38 +1802,56 @@
     if (ni && ni.value.trim()) store.set('netName', ni.value.trim().slice(0, 16));
     sheet.classList.remove('show', 'profile'); renderMenu();
   }
-  /* резервная копия прогресса */
-  function backupCode() {
+  /* ---------- перенос прогресса на другое устройство: одноразовый код через сервер ----------
+     Раньше код содержал все данные открытым текстом (base64): его можно было расшифровать и подделать монеты,
+     а заодно он раскрывал ключ входа. Теперь данные лежат на сервере в xfer/{код} сутки и удаляются после использования */
+  var XA = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789', bkCode = '', bkBusy = false;
+  function xferData() {
     var o = {};
-    try { for (var i = 0; i < localStorage.length; i++) { var k = localStorage.key(i); o[k] = localStorage.getItem(k); } } catch (e) { }
-    return 'GBX1:' + btoa(unescape(encodeURIComponent(JSON.stringify(o))));
+    try { for (var i = 0; i < localStorage.length; i++) { var k = localStorage.key(i); if (k !== 'gbAccounts') o[k] = localStorage.getItem(k); } } catch (e) { }
+    return JSON.stringify(o);
   }
-  var bkArmed = 0;
   function renderBackup(msg) {
-    $('#setBody').innerHTML = '<div class="bk"><h3>💾 ' + t('bk.title') + '</h3><p class="note pnote">' + t('bk.hint') + '</p>' +
-      '<textarea id="bkTxt" spellcheck="false">' + backupCode() + '</textarea>' +
+    $('#setBody').innerHTML = '<div class="bk"><h3>💾 Перенос прогресса</h3>' +
+      '<p class="note pnote">Нужно перенести монеты, рекорды и покупки на другой телефон или в браузер? Получи код здесь и введи его на новом устройстве. Код одноразовый и действует сутки.</p>' +
+      (bkCode ? '<div class="bkcode">' + bkCode + '</div><button class="btn sec" data-bk="copy">📋 Скопировать код</button>' : '<button class="btn" data-bk="make">📤 Получить код переноса</button>') +
+      '<div class="sec" style="margin-top:14px">Есть код с другого устройства?</div>' +
+      '<input id="bkIn" class="pstat-in" maxlength="14" placeholder="GB-XXXX-XXXX" autocomplete="off" style="text-transform:uppercase">' +
+      '<button class="btn sec" data-bk="load">📥 Перенести сюда</button>' +
       (msg ? '<div class="dmark">' + msg + '</div>' : '') +
-      '<div class="row2"><button class="btn" data-bk="copy">📋 ' + t('bk.copy') + '</button><button class="btn sec" data-bk="load">' + (bkArmed ? t('set.resetAsk') : '📥 ' + t('bk.load')) + '</button></div>' +
+      '<p class="note pnote">⚠️ Прогресс на этом устройстве заменится перенесённым. Никому не сообщай код — по нему можно забрать твой аккаунт.</p>' +
       '<button class="btn sec" data-set="close">' + t('set.done') + '</button></div>';
   }
   function backupAct(a) {
-    var ta = document.getElementById('bkTxt');
-    if (a === 'open') { bkArmed = 0; renderBackup(); return; }
-    if (a === 'copy') {
-      ta.focus(); ta.select();
-      var ok = false; try { ok = document.execCommand('copy'); } catch (e) { }
-      try { if (navigator.clipboard) { navigator.clipboard.writeText(ta.value); ok = true; } } catch (e2) { }
-      menuToast(ok ? t('bk.copied') : t('bk.select')); return;
+    if (a === 'open') { renderBackup(); return; }
+    if (a === 'copy') { copyText(bkCode); menuToast('Код скопирован'); return; }
+    if (bkBusy) return;
+    if (!Online.ok()) { renderBackup('⚠ Нужен интернет'); return; }
+    if (a === 'make') {
+      var code = 'GB-'; for (var i = 0; i < 8; i++) code += (i === 4 ? '-' : '') + XA[Math.floor(Math.random() * XA.length)];
+      bkBusy = true; renderBackup('Создаю код…');
+      Online.req('PUT', '/xfer/' + code.replace(/-/g, ''), { d: xferData(), exp: Date.now() + 86400000, t: { '.sv': 'timestamp' } }, function (e) {
+        bkBusy = false;
+        if (e) { renderBackup('⚠ Не удалось создать код: ' + (e === 401 || e === 403 ? 'нет доступа к серверу' : 'проверь интернет')); return; }
+        bkCode = code; renderBackup();
+      });
+      return;
     }
     if (a === 'load') {
-      var v = ta.value.trim();
-      if (v.indexOf('GBX1:') !== 0) { renderBackup('⚠ ' + t('bk.bad')); return; }
-      if (!bkArmed) { bkArmed = 1; var keep = v; renderBackup(); document.getElementById('bkTxt').value = keep; return; }
-      try {
-        var o = JSON.parse(decodeURIComponent(escape(atob(v.slice(5)))));
-        localStorage.clear(); for (var k in o) localStorage.setItem(k, o[k]);
-        location.reload();
-      } catch (e3) { bkArmed = 0; renderBackup('⚠ ' + t('bk.bad')); }
+      var key = (document.getElementById('bkIn').value || '').toUpperCase().replace(/[^A-Z0-9]/g, '').replace(/^GB/, '');
+      if (key.length !== 8) { renderBackup('⚠ Код выглядит так: GB-XXXX-XXXX'); return; }
+      bkBusy = true; renderBackup('Проверяю код…');
+      Online.req('GET', '/xfer/GB' + key, undefined, function (e, v) {
+        if (e || !v || !v.d || !(v.exp > Date.now())) { bkBusy = false; renderBackup('⚠ Код не найден, уже использован или устарел'); return; }
+        Online.req('DELETE', '/xfer/GB' + key, undefined, function () { // код одноразовый
+          try {
+            var o = JSON.parse(v.d), keepAcc = localStorage.getItem('gbAccounts');
+            localStorage.clear(); for (var k in o) localStorage.setItem(k, o[k]);
+            if (keepAcc) localStorage.setItem('gbAccounts', keepAcc);
+            location.reload();
+          } catch (e3) { bkBusy = false; renderBackup('⚠ Данные повреждены'); }
+        });
+      });
     }
   }
   $('#setBtn').addEventListener('click', function () { if (!safeTap()) return; Sound.init(); Sound.play('click'); openSettings(); });
