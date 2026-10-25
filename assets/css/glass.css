@@ -503,7 +503,7 @@ html, body { font-family: "Inter", system-ui, -apple-system, "Segoe UI", Roboto,
 .onb .big { font-size:54px; margin:6px 0; }
 .onb ul { text-align:left; list-style:none; margin:10px 0; display:flex; flex-direction:column; gap:7px; }
 .onb li { background:var(--glass); border:1px solid var(--line); border-radius:12px; padding:9px 12px; font-size:13.5px; font-weight:700; }
-.top h1 { white-space:nowrap; overflow:hidden; text-overflow:clip; }
+.top h1 { white-space:nowrap; overflow:visible; font-size:min(26px, 6.4vw); padding-right:4px; } /* свечение текста не обрезается прямоугольником */
 @media (max-width:380px) { .top h1 { font-size:22px; letter-spacing:3px; } .top { gap:9px; } .coinb { padding:0 10px; } }
 /* v2.3: онлайн-лобби */
 .ltabs { display:flex; gap:6px; padding:4px; border-radius:14px; background:rgba(0,0,0,.25); margin:2px 0 10px; }

@@ -908,7 +908,10 @@
 
   function applyStaticTexts() {
     $('#appTitle').textContent = t('app.title');
-    $('#appTag').textContent = t('app.tag');
+    // подпись под логотипом: число игр считается само, чтобы не устаревало ни в одном языке
+    var TAG = { ru: '{n} игр и мировой рейтинг', en: '{n} games and a world ranking', uk: '{n} ігор і світовий рейтинг', de: '{n} Spiele und Weltrangliste', es: '{n} juegos y ranking mundial',
+      kk: '{n} ойын және әлемдік рейтинг', tr: '{n} oyun ve dünya sıralaması', fr: '{n} jeux et classement mondial', it: '{n} giochi e classifica mondiale', pt: '{n} jogos e ranking mundial', pl: '{n} gier i światowy ranking' };
+    $('#appTag').textContent = (TAG[I18N.lang] || TAG.en).replace('{n}', ORDER.length);
     $('#bestLbl').textContent = t('hud.best');
     $('#setBtnTxt').textContent = t('menu.settings');
     $('#hello').textContent = t('menu.hello');
@@ -1260,7 +1263,7 @@
       '<button class="btn" data-set="close">' + t('set.done') + '</button>' +
       '<div class="ver">' + t('set.version') + ' ' + APP_NAME + '</div>';
   }
-  var APP_NAME = '4.6', APP_CODE = 46, updInfo = null, updBarHidden = false;
+  var APP_NAME = '4.7', APP_CODE = 47, updInfo = null, updBarHidden = false;
   // обновление APK: в /app/latest лежит {code, name, notes, url}, админка публикует его кнопкой.
   // WebView приложения не умеет скачивать файлы сам, поэтому «Скачать» копирует ссылку для браузера
   function checkUpdate() {
