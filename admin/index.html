@@ -491,12 +491,20 @@ function pollSupport() {
     var un = supUnread(), cb = document.querySelector('[data-tab="chat"]'); if (cb) cb.innerHTML = '💬 Поддержка' + (un ? ' <span class="cnt">' + un + '</span>' : '');
     if (tab === 'chat') {
       if (chatUid) { var c = D.support.filter(function (x) { return x.u === chatUid; })[0], cl = $('#chatList'); if (c && cl) { var at = cl.scrollHeight - cl.scrollTop - cl.clientHeight < 40; cl.innerHTML = chatMsgsHtml(c); if (at) cl.scrollTop = cl.scrollHeight; if (c.meta.ua) req('PATCH', '/support/' + chatUid + '/meta', { ua: false }).catch(function () { }); } }
-      else render();
+      else if (!busy()) render();
     }
   }).catch(function () { });
 }
 refresh().then(supNotify);
-setInterval(function () { if (!document.hidden && !openUid && tab !== 'chat') refresh().then(supNotify); }, 15000);
+// пока админ печатает (или в полях есть изменённый текст), экран не перерисовываем — иначе набранное стирается
+function busy() {
+  var ae = document.activeElement;
+  if (ae && /^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName)) return true;
+  return Array.prototype.some.call(document.querySelectorAll('#view input, #view textarea, #view select, #sheet input, #sheet textarea'), function (el) {
+    return el.tagName === 'SELECT' ? false : el.value !== el.defaultValue;
+  });
+}
+setInterval(function () { if (!document.hidden && !openUid && tab !== 'chat' && !busy()) refresh().then(supNotify); }, 15000);
 setInterval(pollSupport, 8000);
 </script>
 </body>
