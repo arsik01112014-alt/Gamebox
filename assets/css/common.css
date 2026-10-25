@@ -79,3 +79,7 @@
 .ach-pr{font-weight:800;font-size:14px;color:#e2e8f0}
 .ach-pr .tbar{height:8px;border-radius:99px;background:rgba(148,163,184,.25);overflow:hidden}
 .ach-pr .tbar i{display:block;height:100%;background:linear-gradient(90deg,#22c55e,#facc15)}
+
+/* сообщения от администрации и техработы */
+#admNote{position:fixed;inset:0;z-index:9998;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(2,6,23,.8)}
+#maint{position:fixed;inset:0;z-index:10001;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(2,6,23,.96)}

@@ -34,7 +34,7 @@ h2 { font-size:15px; margin:18px 2px 8px; color:var(--muted); font-weight:700; t
 .filters { display:flex; gap:6px; overflow-x:auto; margin:4px 0 8px; }
 .filters button { flex:none; background:var(--card2); padding:6px 11px; border-radius:999px; font-size:13px; }
 .filters button.on { background:var(--acc); }
-input { width:100%; padding:11px 13px; border-radius:12px; border:1px solid var(--line); background:var(--card); color:var(--txt); font:inherit; }
+input, textarea, select { width:100%; padding:11px 13px; border-radius:12px; border:1px solid var(--line); background:var(--card); color:var(--txt); font:inherit; }
 .note { color:var(--muted); font-size:13px; line-height:1.5; }
 code { background:var(--card2); padding:2px 6px; border-radius:6px; word-break:break-all; }
 pre { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:10px; font-size:11px; white-space:pre-wrap; word-break:break-all; max-height:240px; overflow:auto; }
@@ -68,7 +68,7 @@ pre { background:var(--card); border:1px solid var(--line); border-radius:12px; 
 var FB = { key: 'AIzaSyDglJuu3uT8vIrAsLByo8cqMWywbS1rgxw', db: 'https://gamebox-73da2-default-rtdb.europe-west1.firebasedatabase.app' };
 var ONLINE_MS = 3 * 60 * 1000, ROOM_MS = 45000;
 var BADGES = { creator: ['👑', 'Создатель'], admin: ['🛡️', 'Админ'], moder: ['🔨', 'Модератор'], tester: ['🧪', 'Тестер'], vip: ['💎', 'VIP'], verified: ['✅', 'Проверен'] };
-var TABS = [['home', '📊 Обзор'], ['players', '👥 Игроки'], ['bans', '🚫 Баны'], ['rooms', '🎮 Комнаты'], ['top', '🏆 Рейтинг'], ['promos', '🎁 Промокоды'], ['setup', '⚙️ Настройка']];
+var TABS = [['home', '📊 Обзор'], ['players', '👥 Игроки'], ['bans', '🚫 Баны'], ['rooms', '🎮 Комнаты'], ['top', '🏆 Рейтинг'], ['promos', '🎁 Промокоды'], ['news', '📢 Рассылка'], ['stats', '📈 Статистика'], ['setup', '⚙️ Настройка']];
 var FILTERS = [['all', 'Все'], ['on', 'Онлайн'], ['guest', 'Гости'], ['google', 'Google'], ['ban', 'Забанены'], ['badge', 'Со значками']];
 var tab = 'home', flt = 'all', query = '', D = null, me = null, openUid = null;
 
@@ -147,7 +147,7 @@ function req(method, path, body) {
 function act(p, okMsg) { return p.then(function () { toast(okMsg); return refresh(); }, function (e) { toast(e === 401 || e === 403 ? 'Нет прав: обнови правила базы (вкладка «Настройка»)' : 'Ошибка: ' + e); }); }
 
 function load() {
-  var paths = ['/lb', '/rooms', '/bans', '/profiles', '/badges', '/ips', '/ipbans', '/promos', '/promoUses', '/noads', '/app/latest'];
+  var paths = ['/lb', '/rooms', '/bans', '/profiles', '/badges', '/ips', '/ipbans', '/promos', '/promoUses', '/noads', '/app'];
   return Promise.all(paths.map(function (p) { return req('GET', p).catch(function (e) { return { __err: e }; }); })).then(function (r) {
     function ok(x) { return x && !x.__err ? x : {}; }
     var lb = ok(r[0]), seen = lb._seen_0 || {}, nick = lb._nick_0 || {}, top = lb._all_0 || {};
@@ -176,7 +176,7 @@ function load() {
       players: players, rooms: roomList, failed: r.filter(function (x) { return x && x.__err; }).length, ipsOk: !(r[5] && r[5].__err),
       byId: P, lb: lb, banList: Object.keys(bans).map(function (u) { return { u: u, n: (bans[u] && bans[u].n) || (P[u] && P[u].n) || '' }; }),
       ipBanList: Object.keys(ipbans).map(function (k) { return { k: k, v: ipbans[k] || {} }; }),
-      top: overall(lb), appLatest: ok(r[10]),
+      top: overall(lb), app: ok(r[10]), appLatest: ok(r[10]).latest || {},
       promos: Object.keys(ok(r[7])).map(function (h) { var v = ok(r[7])[h] || {}; return { h: h, v: v, used: Object.keys(ok(r[8])[h] || {}).length }; }).sort(function (x, y) { return (y.v.t || 0) - (x.v.t || 0); })
     };
   });
@@ -234,6 +234,38 @@ function render() {
           ' · активаций ' + x.used + (v.max ? ' / ' + esc(v.max) : '') + (v.m ? ' · «' + esc(v.m) + '»' : '') + '</small></div>' +
           '<button class="sec" data-act="promo-copy" data-id="' + esc(v.code || '') + '">📋</button><button class="red" data-act="promo-del" data-id="' + esc(x.h) + '">✕</button></div>';
       }).join('') : '<p class="note">Пока нет.</p>');
+  } else if (tab === 'news') {
+    var A = D.app || {}, N = A.news || {}, E = A.event || {}, M = A.maint || {}, evOn = E.mul > 1 && E.until > now;
+    v.innerHTML = warn + '<h2>📢 Объявление всем игрокам</h2><div class="row" style="display:block">' +
+      (N.text ? '<p class="note" style="margin-top:0">Сейчас: «' + esc(N.title || '') + ' ' + esc(N.text) + '» · ' + ago(N.t) + '</p>' : '<p class="note" style="margin-top:0">Объявлений нет.</p>') +
+      '<input id="nt" placeholder="Заголовок (необязательно)" style="margin-bottom:8px"><textarea id="nx" rows="3" placeholder="Текст объявления" style="width:100%;margin-bottom:8px"></textarea>' +
+      '<div class="acts" style="margin:0"><button data-act="news-send">📨 Отправить всем</button>' + (N.text ? '<button class="red" data-act="news-del">Убрать</button>' : '') + '</div>' +
+      '<p class="note">Каждый игрок увидит окно один раз, при следующем заходе в игру (в течение минуты, если игра открыта).</p></div>' +
+      '<h2>🎉 Событие: больше монет</h2><div class="row" style="display:block">' +
+      '<p class="note" style="margin-top:0">' + (evOn ? 'Идёт: «' + esc(E.title || 'Событие') + '», монеты ×' + E.mul + ' до ' + new Date(E.until).toLocaleString('ru-RU') : 'Сейчас событий нет.') + '</p>' +
+      '<input id="et" placeholder="Название, например «Выходные»" style="margin-bottom:8px"><div class="grid2" style="margin:0 0 8px"><select id="em"><option value="2">×2 монеты</option><option value="3">×3 монеты</option><option value="5">×5 монет</option></select>' +
+      '<select id="eh"><option value="1">на 1 час</option><option value="3">на 3 часа</option><option value="24" selected>на сутки</option><option value="72">на 3 дня</option><option value="168">на неделю</option></select></div>' +
+      '<div class="acts" style="margin:0"><button data-act="ev-start">▶ Запустить</button>' + (evOn ? '<button class="red" data-act="ev-stop">Остановить</button>' : '') + '</div></div>' +
+      '<h2>🛠 Технические работы</h2><div class="row" style="display:block">' +
+      '<p class="note" style="margin-top:0">' + (M.on ? '⛔ Включены: игроки видят экран техработ и не могут играть.' : 'Выключены.') + '</p>' +
+      '<input id="mt" placeholder="Текст для игроков" value="' + esc(M.text || '') + '" style="margin-bottom:8px">' +
+      (M.on ? '<button class="green" data-act="maint-off" style="width:100%">✅ Выключить техработы</button>' : '<button class="amber" data-act="maint-on" style="width:100%">⛔ Включить техработы</button>') + '</div>';
+  } else if (tab === 'stats') {
+    var today = new Date().toLocaleDateString('ru-RU'), plays = 0, coins = 0, lv = {}, games = {}, days = [];
+    P.forEach(function (p) { var pr = p.pr || {}; plays += +pr.pl || 0; coins += +pr.co || 0; });
+    Object.keys(D.lb || {}).forEach(function (k) { if (k.charAt(0) === '_') return; var g = k.slice(0, k.lastIndexOf('_')); games[g] = (games[g] || 0) + Object.keys(D.lb[k] || {}).length; });
+    for (var di = 6; di >= 0; di--) { var d0 = new Date(); d0.setHours(0, 0, 0, 0); d0 = d0.getTime() - di * 86400000; days.push({ d: new Date(d0).toLocaleDateString('ru-RU', { weekday: 'short' }), n: P.filter(function (p) { return p.s >= d0 && p.s < d0 + 86400000; }).length }); }
+    var newToday = P.filter(function (p) { return p.pr && p.pr.since === today; }).length, maxD = Math.max.apply(null, days.map(function (x) { return x.n; }).concat(1));
+    var topG = Object.keys(games).sort(function (a, b) { return games[b] - games[a]; }).slice(0, 10), maxG = topG.length ? games[topG[0]] : 1;
+    v.innerHTML = warn + '<div class="stats">' + stat('🆕', newToday, 'Новых сегодня') + stat('🎲', plays, 'Партий сыграно') + stat('🪙', coins, 'Монет у игроков') +
+      stat('📊', P.length ? Math.round(plays / P.length) : 0, 'Партий на игрока') + '</div>' +
+      '<h2>Последний заход по дням</h2><div class="row" style="display:flex;align-items:flex-end;gap:6px;height:150px">' + days.map(function (x) {
+        return '<div style="flex:1;text-align:center"><small>' + x.n + '</small><div style="height:' + Math.round(x.n / maxD * 100) + 'px;min-height:3px;border-radius:6px 6px 0 0;background:linear-gradient(#a78bfa,#6366f1)"></div><small>' + x.d + '</small></div>';
+      }).join('') + '</div>' +
+      '<h2>Популярные игры (игроков с рекордом)</h2>' + topG.map(function (g) {
+        return '<div class="row"><div class="m"><b>' + esc(g) + '</b><div style="height:8px;border-radius:4px;background:rgba(255,255,255,.1);margin-top:6px"><div style="height:8px;border-radius:4px;width:' + Math.round(games[g] / maxG * 100) + '%;background:linear-gradient(90deg,#22c55e,#facc15)"></div></div></div><b>' + games[g] + '</b></div>';
+      }).join('') +
+      '<button class="sec" data-act="export" style="width:100%;margin-top:12px">📋 Скопировать список игроков (CSV)</button>';
   } else {
     var rules = RULES.split('ADMIN_UID').join(me || 'ADMIN_UID');
     v.innerHTML = updHtml() + '<h2>Твой ID админа</h2><div class="row"><div class="m"><b>' + esc(me || 'нет связи') + '</b></div><button class="sec" data-act="copy-id">Копировать</button></div>' +
@@ -277,12 +309,34 @@ function openPlayer(uid) {
     }).join('') + '</div>' +
     '<h2>Монеты</h2><div class="row" style="display:block"><div class="note" style="margin-bottom:6px">Баланс у игрока: ' + (pr.co != null ? esc(pr.co) : 'неизвестен') + '. Начислится при следующем заходе или в течение минуты, если игра открыта.</div>' +
     '<div class="grid2" style="margin:0 0 8px"><input id="gc" type="number" placeholder="Сколько (минус — списать)" value="100"><input id="gm" placeholder="Сообщение"></div><button data-act="gift" style="width:100%">💰 Начислить</button></div>' +
+    '<h2>Сообщение и управление</h2><div class="row" style="display:block">' +
+    '<input id="ms" placeholder="Текст сообщения или предупреждения" style="margin-bottom:8px"><div class="acts" style="margin:0 0 8px"><button data-act="msg">📩 Сообщение</button><button class="amber" data-act="warn">⚠️ Предупредить</button></div>' +
+    '<div class="grid2" style="margin:0 0 8px"><input id="nn" placeholder="Новый ник" maxlength="16"><button class="sec" data-act="rename">✏️ Сменить ник</button></div>' +
+    '<div class="grid2" style="margin:0 0 8px"><input id="xx" type="number" placeholder="Опыт (XP)" value="500"><button class="sec" data-act="givexp">⭐ Дать опыт</button></div>' +
+    '<button class="sec" data-act="unlockall" style="width:100%">🔓 Открыть все платные игры</button>' +
+    '<p class="note">Применится, когда игрок зайдёт в игру; он увидит окно с сообщением.</p></div>' +
+    recordsHtml(uid) + sameIpHtml(p) +
     '<h2>Действия</h2><div class="acts">' +
     (p.ban ? '<button class="green" data-act="unban" data-id="' + esc(uid) + '">Разбан аккаунта</button>' : '<button class="red" data-act="ban">Бан аккаунта</button>') +
     (p.ip ? (p.ipBan ? '<button class="green" data-act="unbanip" data-id="' + esc(ipKey(p.ip)) + '">Разбан IP</button>' : '<button class="amber" data-act="banip">Бан по IP</button>') : '<button class="sec" disabled>IP неизвестен</button>') +
     '<button class="' + (p.noads ? 'green' : 'sec') + '" data-act="noads" data-on="' + (p.noads ? 1 : 0) + '" style="grid-column:1 / -1">' + (p.noads ? '✓ Реклама отключена · включить' : '📺 Отключить рекламу этому игроку') + '</button>' +
     '<button class="red" data-act="delacc" style="grid-column:1 / -1">🗑 Удалить аккаунт</button><button class="sec" data-act="copy-uid">Копировать ID</button><button class="sec" data-act="hide">Закрыть</button></div>';
   $('#modal').classList.add('show');
+}
+function recordsHtml(uid) {
+  var rows = [];
+  Object.keys((D && D.lb) || {}).forEach(function (k) { if (k.charAt(0) === '_') return; var r = (D.lb[k] || {})[uid]; if (r) rows.push({ k: k, s: +r.s || 0, t: r.t }); });
+  rows.sort(function (a, b) { return b.s - a.s; });
+  var DN = ['лёгк.', 'норм.', 'сложн.', 'безум.'];
+  return '<h2>Рекорды (' + rows.length + ')</h2>' + (rows.length ? rows.slice(0, 40).map(function (x) {
+    var g = x.k.slice(0, x.k.lastIndexOf('_')), d = +x.k.slice(x.k.lastIndexOf('_') + 1);
+    return '<div class="row"><div class="m"><b>' + esc(g) + ' · ' + x.s + '</b><small>' + (DN[d] || '') + (x.t ? ' · ' + ago(x.t) : '') + '</small></div><button class="red" data-act="delrec" data-id="' + esc(x.k) + '">✕</button></div>';
+  }).join('') + '<p class="note">✕ — удалить рекорд (например, накрученный).</p>' : '<p class="note">Рекордов нет.</p>');
+}
+function sameIpHtml(p) {
+  if (!p.ip || !D) return '';
+  var same = D.players.filter(function (q) { return q.ip === p.ip && q.u !== p.u; });
+  return '<h2>Другие аккаунты с этого IP (' + same.length + ')</h2>' + (same.length ? same.map(playerRow).join('') + '<p class="note">Один IP бывает у одной семьи, школы или мобильного оператора — это не всегда мультиаккаунт.</p>' : '<p class="note">Нет.</p>');
 }
 function closeModal() { $('#modal').classList.remove('show'); openUid = null; }
 
@@ -326,6 +380,30 @@ document.addEventListener('click', function (e) {
     if (!c) { toast('Укажи количество монет'); return; }
     act(req('POST', '/gifts/' + openUid, { c: c, m: $('#gm').value.trim().slice(0, 60), t: { '.sv': 'timestamp' } }), (c > 0 ? 'Начислено ' : 'Списано ') + Math.abs(c) + ' монет');
   }
+  else if (a === 'msg' || a === 'warn') {
+    var mt = $('#ms').value.trim(); if (!mt) { toast('Напиши текст'); return; }
+    act(req('POST', '/gifts/' + openUid, { c: 0, m: mt.slice(0, 200), w: a === 'warn' ? 1 : 0, t: { '.sv': 'timestamp' } }), a === 'warn' ? 'Предупреждение отправлено' : 'Сообщение отправлено');
+  }
+  else if (a === 'rename') {
+    var nn = $('#nn').value.trim(); if (nn.length < 2) { toast('Ник слишком короткий'); return; }
+    act(req('POST', '/gifts/' + openUid, { c: 0, n: nn.slice(0, 16), t: { '.sv': 'timestamp' } }).then(function () { return req('PATCH', '/lb/_nick_0/' + openUid, { n: nn.slice(0, 16) }).catch(function () { }); }), 'Ник сменится при заходе игрока');
+  }
+  else if (a === 'givexp') { var xv = parseInt($('#xx').value, 10); if (!xv) { toast('Укажи опыт'); return; } act(req('POST', '/gifts/' + openUid, { c: 0, x: xv, t: { '.sv': 'timestamp' } }), 'Опыт отправлен'); }
+  else if (a === 'unlockall') act(req('POST', '/gifts/' + openUid, { c: 0, un: 'all', t: { '.sv': 'timestamp' } }), 'Игры откроются при заходе');
+  else if (a === 'delrec') act(req('DELETE', '/lb/' + id + '/' + openUid), 'Рекорд удалён');
+  else if (a === 'news-send') {
+    var tx = $('#nx').value.trim(); if (!tx) { toast('Напиши текст объявления'); return; }
+    act(req('PUT', '/app/news', { id: Date.now(), title: $('#nt').value.trim().slice(0, 60), text: tx.slice(0, 500), t: { '.sv': 'timestamp' } }), 'Объявление отправлено');
+  }
+  else if (a === 'news-del') act(req('DELETE', '/app/news'), 'Объявление убрано');
+  else if (a === 'ev-start') act(req('PUT', '/app/event', { mul: +$('#em').value, until: Date.now() + (+$('#eh').value) * 3600000, title: $('#et').value.trim().slice(0, 40) || 'Событие' }), 'Событие запущено');
+  else if (a === 'ev-stop') act(req('DELETE', '/app/event'), 'Событие остановлено');
+  else if (a === 'maint-on') {
+    if (Date.now() - (window.mtAsk || 0) > 4000) { window.mtAsk = Date.now(); toast('⚠️ Нажми ещё раз: все игроки потеряют доступ к игре'); return; }
+    act(req('PUT', '/app/maint', { on: true, text: $('#mt').value.trim().slice(0, 200), t: { '.sv': 'timestamp' } }), 'Техработы включены');
+  }
+  else if (a === 'maint-off') act(req('DELETE', '/app/maint'), 'Техработы выключены');
+  else if (a === 'export') copy('id;ник;тип;последний заход;уровень;партий;монет;ip\n' + D.players.map(function (q) { var pr = q.pr || {}; return [q.u, q.n, q.ty, q.s ? new Date(q.s).toLocaleString('ru-RU') : '', pr.lv || '', pr.pl || '', pr.co || '', q.ip].join(';'); }).join('\n'));
   else if (a === 'promo-gen') $('#pc').value = genCode();
   else if (a === 'promo-copy') copy(id);
   else if (a === 'promo-del') act(req('DELETE', '/promos/' + id).then(function () { return req('DELETE', '/promoUses/' + id); }), 'Промокод удалён');

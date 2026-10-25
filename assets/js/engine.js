@@ -1257,7 +1257,7 @@
       '<button class="btn" data-set="close">' + t('set.done') + '</button>' +
       '<div class="ver">' + t('set.version') + ' 3.0</div>';
   }
-  var APP_CODE = 39, updInfo = null, updBarHidden = false;
+  var APP_CODE = 40, updInfo = null, updBarHidden = false;
   // обновление APK: в /app/latest лежит {code, name, notes, url}, админка публикует его кнопкой.
   // WebView приложения не умеет скачивать файлы сам, поэтому «Скачать» копирует ссылку для браузера
   function checkUpdate() {
@@ -1503,6 +1503,7 @@
       Online.req('GET', '/bans/' + me, undefined, function (e, v) { banAcc = !e && !!v; setBanned(); });
       Online.req('GET', '/badges/' + me, undefined, function (e, v) { if (!e) myBadges = v || {}; });
       Online.req('GET', '/noads/' + me, undefined, function (e, v) { noAds = !e && !!v; }); // админ отключил рекламу этому игроку
+      checkApp();
       // аккаунт удалён админом: снимаем метку и начинаем с чистого листа
       Online.req('GET', '/deleted/' + me, undefined, function (e, v) {
         if (e || !v) return;
@@ -1511,12 +1512,24 @@
       // монеты от админа: gifts/{uid}; удаляем, и только если удаление прошло, начисляем — без двойного начисления
       Online.req('GET', '/gifts/' + me, undefined, function (e, g) {
         if (e || !g) return;
-        var sum = 0, msg = '';
-        Object.keys(g).forEach(function (k) { sum += +(g[k] && g[k].c) || 0; msg = msg || (g[k] && g[k].m) || ''; });
+        // в подарке может быть: c — монеты, m — сообщение, w — предупреждение, n — новый ник, x — опыт, un — открыть игру (all — все)
+        var sum = 0, msg = '', warn = false, nn = '', xp = 0, un = [];
+        Object.keys(g).forEach(function (k) {
+          var v = g[k] || {}; sum += +v.c || 0; xp += +v.x || 0; msg = msg || v.m || ''; if (v.w) warn = true; if (v.n) nn = String(v.n).slice(0, 16); if (v.un) un.push(v.un);
+        });
         Online.req('DELETE', '/gifts/' + me, undefined, function (e2) {
-          if (e2 || !sum) return;
-          addCoins(sum); renderProfileChip(); Sound.play('bonus'); if (sum > 0) fxConfetti(50);
-          api.toast((sum > 0 ? '🎁 Подарок от администрации: +' + sum : 'Администрация списала ' + (-sum)) + ' монет' + (msg ? ' — ' + msg : ''));
+          if (e2) return;
+          if (nn) { store.set('netName', nn); }
+          if (xp) store.set('xp', Math.max(0, store.get('xp', 0) + xp));
+          un.forEach(function (id) { var ids = id === 'all' ? Object.keys(LOCKED) : [id]; store.set('unlocked', store.get('unlocked', []).concat(ids.filter(function (x) { return LOCKED[x]; }))); });
+          if (sum) { addCoins(sum); Sound.play('bonus'); if (sum > 0) fxConfetti(50); }
+          renderProfileChip(); if (App.state === 'menu') renderMenu();
+          var parts = [];
+          if (sum) parts.push(sum > 0 ? '+' + sum + ' монет' : 'списано ' + (-sum) + ' монет');
+          if (xp) parts.push('+' + xp + ' XP');
+          if (un.length) parts.push('открыты игры');
+          if (nn) parts.push('ник изменён на «' + nn + '»');
+          if (warn || msg || parts.length) adminNote(warn ? '⚠️ Предупреждение' : '📩 Сообщение от администрации', (msg ? msg : '') + (parts.length ? (msg ? '\n\n' : '') + parts.join(', ') : ''), warn);
         });
       });
       // IP нужен только для бана по адресу; читать его может только админ (см. правила базы)
@@ -1524,6 +1537,33 @@
       else fetch('https://api.ipify.org?format=json').then(function (r) { return r.json(); }).then(function (j) {
         myIp = j.ip; Online.req('PUT', '/ips/' + me, { ip: myIp, t: { '.sv': 'timestamp' } }); checkIpBan();
       }).catch(function () { });
+    });
+  }
+  // окно с сообщением от администрации (подарок, предупреждение, объявление)
+  var noteQ = [];
+  function adminNote(title, text, warn) {
+    if (document.getElementById('admNote')) { noteQ.push([title, text, warn]); return; } // показываем по очереди
+    var el = document.body.appendChild(Object.assign(document.createElement('div'), { id: 'admNote' }));
+    el.innerHTML = '<div class="acct-card upd-card"><button class="upd-x" data-admx="1">✕</button><h3>' + escapeHtml(title) + '</h3><p style="white-space:pre-line">' + escapeHtml(text) + '</p>' +
+      '<button class="btn' + (warn ? ' sec' : '') + '" data-admx="1">Понятно</button></div>';
+    Sound.play(warn ? 'hit' : 'bonus');
+  }
+  document.addEventListener('click', function (e) { if (e.target.closest('[data-admx]')) { var el = document.getElementById('admNote'); if (el) el.remove(); if (noteQ.length) adminNote.apply(null, noteQ.shift()); } });
+  // общие настройки из админки: app/news — объявление, app/event — множитель монет на время, app/maint — техработы
+  var evMul = 1;
+  function checkApp() {
+    Online.req('GET', '/app', undefined, function (e, A) {
+      if (e || !A) return;
+      var N = A.news;
+      if (N && N.id && N.text && store.get('newsSeen', 0) !== N.id) { store.set('newsSeen', N.id); adminNote(N.title || '📢 Объявление', N.text); }
+      var E = A.event;
+      evMul = E && E.mul > 1 && E.until > Date.now() ? +E.mul : 1;
+      if (evMul > 1 && store.get('evSeen', 0) !== E.until) { store.set('evSeen', E.until); api.toast('🎉 ' + (E.title || 'Событие') + ': монеты ×' + evMul + ' до ' + new Date(E.until).toLocaleString('ru-RU', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })); }
+      var M = A.maint, el = document.getElementById('maint');
+      if (M && M.on) {
+        if (!el) el = document.body.appendChild(Object.assign(document.createElement('div'), { id: 'maint' }));
+        el.innerHTML = '<div class="acct-card"><div style="font-size:48px">🛠</div><h3>Технические работы</h3><p>' + escapeHtml(M.text || 'Скоро всё заработает. Загляни чуть позже!') + '</p></div>';
+      } else if (el) el.remove();
     });
   }
   function checkIpBan() { Online.req('GET', '/ipbans/' + ipKey(myIp), undefined, function (e, v) { banIp = !e && !!v; setBanned(); }); }
@@ -2102,6 +2142,7 @@
     if (single && ['chess', 'checkers', 'reversi', 'connect4', 'nardy'].indexOf(id) >= 0 && App.diff >= 2 && sc >= 1000) setFlag('brain');
     r.coins += Math.round(r.xp / 2);
     if (boostLeft() > 0) r.coins *= 2; // бустер «×2 монеты» из магазина
+    if (evMul > 1) r.coins = Math.round(r.coins * evMul); // событие из админки
     addCoins(r.coins);
     var xp0 = store.get('xp', 0);
     r.L0 = lvlInfo(xp0); r.L1 = lvlInfo(xp0 + r.xp);
