@@ -107,6 +107,18 @@
         ".read": "auth != null && (auth.uid === $uid || auth.uid === 'ADMIN_UID')",
         ".write": "auth != null && auth.uid === 'ADMIN_UID'"
       }
+    },
+    "support": {
+      ".read": "auth != null && auth.uid === 'ADMIN_UID'",
+      "$uid": {
+        ".read": "auth != null && (auth.uid === $uid || auth.uid === 'ADMIN_UID')",
+        ".write": "auth != null && (auth.uid === 'ADMIN_UID' || (auth.uid === $uid && !root.child('bans').child(auth.uid).exists()))",
+        "msgs": {
+          "$m": {
+            ".validate": "newData.child('x').isString() && newData.child('x').val().length <= 500"
+          }
+        }
+      }
     }
   }
 }

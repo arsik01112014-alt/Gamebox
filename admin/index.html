@@ -52,6 +52,17 @@ pre { background:var(--card); border:1px solid var(--line); border-radius:12px; 
 .acts { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:10px; }
 .badges button { margin:3px 4px 0 0; padding:6px 10px; font-size:13px; }
 #toast { position:fixed; left:50%; bottom:22px; z-index:10; transform:translateX(-50%); display:none; padding:11px 16px; border-radius:12px; background:#111827; border:1px solid var(--line); box-shadow:0 8px 30px rgba(0,0,0,.5); }
+.cnt { display:inline-block; min-width:18px; padding:0 5px; border-radius:9px; background:#ef4444; color:#fff; font-size:11px; font-weight:900; line-height:18px; text-align:center; }
+.chat { display:flex; flex-direction:column; gap:8px; max-height:calc(100vh - 330px); overflow-y:auto; padding:6px 2px; }
+.cm { max-width:84%; padding:9px 12px 6px; border-radius:16px; font-size:15px; line-height:1.35; white-space:pre-wrap; word-wrap:break-word; }
+.cm small { display:block; font-size:10.5px; opacity:.6; margin-top:3px; text-align:right; }
+.cm.u { align-self:flex-start; background:var(--card); border:1px solid var(--line); border-bottom-left-radius:5px; }
+.cm.a { align-self:flex-end; background:linear-gradient(135deg,#7c5cff,#6366f1); color:#fff; border-bottom-right-radius:5px; }
+.chatin { display:flex; gap:8px; margin-top:10px; }
+.chatin textarea { flex:1; resize:none; }
+.chatin button { width:56px; flex:none; font-size:20px; }
+.qr { display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; }
+.qr button { width:auto; padding:7px 10px; font-size:12px; }
 </style>
 </head>
 <body>
@@ -68,9 +79,9 @@ pre { background:var(--card); border:1px solid var(--line); border-radius:12px; 
 var FB = { key: 'AIzaSyDglJuu3uT8vIrAsLByo8cqMWywbS1rgxw', db: 'https://gamebox-73da2-default-rtdb.europe-west1.firebasedatabase.app' };
 var ONLINE_MS = 3 * 60 * 1000, ROOM_MS = 45000;
 var BADGES = { creator: ['👑', 'Создатель'], admin: ['🛡️', 'Админ'], moder: ['🔨', 'Модератор'], tester: ['🧪', 'Тестер'], vip: ['💎', 'VIP'], verified: ['✅', 'Проверен'] };
-var TABS = [['home', '📊 Обзор'], ['players', '👥 Игроки'], ['bans', '🚫 Баны'], ['rooms', '🎮 Комнаты'], ['top', '🏆 Рейтинг'], ['promos', '🎁 Промокоды'], ['news', '📢 Рассылка'], ['stats', '📈 Статистика'], ['setup', '⚙️ Настройка']];
+var TABS = [['home', '📊 Обзор'], ['chat', '💬 Поддержка'], ['players', '👥 Игроки'], ['bans', '🚫 Баны'], ['rooms', '🎮 Комнаты'], ['top', '🏆 Рейтинг'], ['promos', '🎁 Промокоды'], ['news', '📢 Рассылка'], ['stats', '📈 Статистика'], ['setup', '⚙️ Настройка']];
 var FILTERS = [['all', 'Все'], ['on', 'Онлайн'], ['guest', 'Гости'], ['google', 'Google'], ['ban', 'Забанены'], ['badge', 'Со значками']];
-var tab = 'home', flt = 'all', query = '', D = null, me = null, openUid = null;
+var tab = 'home', flt = 'all', query = '', D = null, me = null, openUid = null, chatUid = null, seenSup = null;
 
 function $(s) { return document.querySelector(s); }
 function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return '&#' + c.charCodeAt(0) + ';'; }); }
@@ -147,7 +158,7 @@ function req(method, path, body) {
 function act(p, okMsg) { return p.then(function () { toast(okMsg); return refresh(); }, function (e) { toast(e === 401 || e === 403 ? 'Нет прав: обнови правила базы (вкладка «Настройка»)' : 'Ошибка: ' + e); }); }
 
 function load() {
-  var paths = ['/lb', '/rooms', '/bans', '/profiles', '/badges', '/ips', '/ipbans', '/promos', '/promoUses', '/noads', '/app'];
+  var paths = ['/lb', '/rooms', '/bans', '/profiles', '/badges', '/ips', '/ipbans', '/promos', '/promoUses', '/noads', '/app', '/support'];
   return Promise.all(paths.map(function (p) { return req('GET', p).catch(function (e) { return { __err: e }; }); })).then(function (r) {
     function ok(x) { return x && !x.__err ? x : {}; }
     var lb = ok(r[0]), seen = lb._seen_0 || {}, nick = lb._nick_0 || {}, top = lb._all_0 || {};
@@ -176,14 +187,41 @@ function load() {
       players: players, rooms: roomList, failed: r.filter(function (x) { return x && x.__err; }).length, ipsOk: !(r[5] && r[5].__err),
       byId: P, lb: lb, banList: Object.keys(bans).map(function (u) { return { u: u, n: (bans[u] && bans[u].n) || (P[u] && P[u].n) || '' }; }),
       ipBanList: Object.keys(ipbans).map(function (k) { return { k: k, v: ipbans[k] || {} }; }),
-      top: overall(lb), app: ok(r[10]), appLatest: ok(r[10]).latest || {},
+      top: overall(lb), app: ok(r[10]), support: supList(ok(r[11])), appLatest: ok(r[10]).latest || {},
       promos: Object.keys(ok(r[7])).map(function (h) { var v = ok(r[7])[h] || {}; return { h: h, v: v, used: Object.keys(ok(r[8])[h] || {}).length }; }).sort(function (x, y) { return (y.v.t || 0) - (x.v.t || 0); })
     };
   });
 }
 
+function supList(raw) {
+  return Object.keys(raw || {}).map(function (u) {
+    var v = raw[u] || {}, m = v.msgs || {};
+    return { u: u, meta: v.meta || {}, msgs: Object.keys(m).map(function (k) { return m[k]; }).sort(function (a, b) { return (a.t || 0) - (b.t || 0); }) };
+  }).sort(function (a, b) { return (b.meta.last || 0) - (a.meta.last || 0); });
+}
+// звук и вибрация, когда приходит новое сообщение в поддержку
+function beep() {
+  try { var A = beep.a || (beep.a = new (window.AudioContext || window.webkitAudioContext)()), o = A.createOscillator(), g = A.createGain();
+    o.frequency.value = 880; o.connect(g); g.connect(A.destination); g.gain.setValueAtTime(0.15, A.currentTime); g.gain.exponentialRampToValueAtTime(0.001, A.currentTime + 0.4);
+    o.start(); o.stop(A.currentTime + 0.4); setTimeout(function () { var o2 = A.createOscillator(); o2.frequency.value = 1320; o2.connect(g); g.gain.setValueAtTime(0.15, A.currentTime); g.gain.exponentialRampToValueAtTime(0.001, A.currentTime + 0.4); o2.start(); o2.stop(A.currentTime + 0.4); }, 160);
+  } catch (e) { }
+  try { if (window.Android && window.Android.vibrate) window.Android.vibrate(400); else if (navigator.vibrate) navigator.vibrate([200, 100, 200]); } catch (e) { }
+}
+function supNotify() {
+  if (!D || !D.support) return;
+  var now = {}, fresh = [];
+  D.support.forEach(function (c) { if (c.meta.ua) { now[c.u] = c.meta.last || 1; if (seenSup && seenSup[c.u] !== now[c.u]) fresh.push(c); } });
+  if (seenSup && fresh.length) { beep(); toast('💬 Новое сообщение: ' + (fresh[0].meta.n || 'игрок') + (fresh[0].meta.lx ? ' — «' + fresh[0].meta.lx + '»' : '')); }
+  seenSup = now;
+  var n = Object.keys(now).length; document.title = (n ? '(' + n + ') ' : '') + 'GameBox Admin';
+}
+function supUnread() { return D && D.support ? D.support.filter(function (c) { return c.meta.ua; }).length : 0; }
+function chatMsgsHtml(c) {
+  return c.msgs.map(function (m) { return '<div class="cm ' + (m.f === 'a' ? 'a' : 'u') + '">' + esc(m.x) + '<small>' + (m.t ? new Date(m.t).toLocaleString('ru-RU', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '') + '</small></div>'; }).join('') || '<p class="note">Сообщений нет.</p>';
+}
 function render() {
-  $('#tabs').innerHTML = TABS.map(function (t) { return '<button class="' + (t[0] === tab ? 'on' : '') + '" data-tab="' + t[0] + '">' + t[1] + '</button>'; }).join('');
+  var un = supUnread();
+  $('#tabs').innerHTML = TABS.map(function (t) { return '<button class="' + (t[0] === tab ? 'on' : '') + '" data-tab="' + t[0] + '">' + t[1] + (t[0] === 'chat' && un ? ' <span class="cnt">' + un + '</span>' : '') + '</button>'; }).join('');
   $('#sub').textContent = me ? 'ID админа: ' + me.slice(0, 10) + '…' : 'нет связи';
   var v = $('#view');
   if (!D) { v.innerHTML = '<p class="note">Нет связи с сервером. Проверь интернет и нажми ⟳.</p>'; return; }
@@ -198,6 +236,21 @@ function render() {
       stat('🎮', D.rooms.filter(function (x) { return now - x.last < ROOM_MS; }).length, 'Открытых комнат') + stat('⚔️', D.rooms.filter(function (x) { return x.c && now - x.last < ROOM_MS; }).length, 'Матчей идёт') +
       '</div><h2>Сейчас в сети</h2>' + (online.length ? online.slice(0, 20).map(playerRow).join('') : '<p class="note">Никого.</p>') +
       '<p class="note">«В сети» — игра открыта и отмечалась за последние 3 минуты. Игроки, не заходившие после обновления, видны только по нику.</p>';
+  } else if (tab === 'chat') {
+    var C = D.support || [], cur = chatUid && C.filter(function (c) { return c.u === chatUid; })[0];
+    if (cur) {
+      var pl = D.byId[cur.u] || {};
+      v.innerHTML = '<div class="row"><button class="sec" data-act="chat-back">←</button><div class="m click" data-uid="' + esc(cur.u) + '"><b>' + GBAV.html(cur.meta.a || pl.a || 'i:kid') + ' ' + esc(cur.meta.n || pl.n || 'Игрок') + '</b><small>ID ' + esc(cur.u.slice(0, 10)) + ' · профиль игрока ›</small></div></div>' +
+        '<div id="chatList" class="chat">' + chatMsgsHtml(cur) + '</div>' +
+        '<div class="chatin"><textarea id="cr" rows="2" maxlength="500" placeholder="Ответ игроку…"></textarea><button data-act="chat-send">➤</button></div>' +
+        '<div class="qr">' + ['Спасибо, передал разработчику!', 'Исправим в следующем обновлении 👍', 'Обнови игру до последней версии', 'Начислил монеты в подарок 🎁'].map(function (q) { return '<button class="sec" data-act="chat-q" data-id="' + esc(q) + '">' + esc(q) + '</button>'; }).join('') + '</div>';
+      var cl = $('#chatList'); cl.scrollTop = cl.scrollHeight;
+    } else v.innerHTML = warn + '<h2>Обращения (' + C.length + ')</h2>' + (C.length ? C.map(function (c) {
+      var pl = D.byId[c.u] || {}, lastM = c.msgs[c.msgs.length - 1] || {};
+      return '<div class="row click" data-chat="' + esc(c.u) + '"><div class="av">' + GBAV.html(c.meta.a || pl.a || 'i:kid') + '</div><div class="m"><b>' + esc(c.meta.n || pl.n || 'Игрок') + (c.meta.ua ? ' <span class="chip ban">новое</span>' : '') + '</b>' +
+        '<small>' + (lastM.f === 'a' ? 'Вы: ' : '') + esc((lastM.x || '').slice(0, 60)) + ' · ' + ago(c.meta.last) + '</small></div></div>';
+    }).join('') : '<p class="note">Пока никто не писал. Игроки пишут через кнопку 💬 в левом нижнем углу игры.</p>') +
+      '<p class="note">Пока админка открыта, о новых сообщениях сообщают звук, вибрация и всплывающая плашка. Если приложение свёрнуто или закрыто, уведомлений нет.</p>';
   } else if (tab === 'players') {
     v.innerHTML = warn + '<input id="q" placeholder="🔎 Ник, ID или IP" value="' + esc(query) + '">' +
       '<div class="filters">' + FILTERS.map(function (f) { return '<button class="' + (f[0] === flt ? 'on' : '') + '" data-flt="' + f[0] + '">' + f[1] + '</button>'; }).join('') + '</div><div id="plist"></div>';
@@ -348,6 +401,7 @@ $('#modal').addEventListener('click', function (e) { if (e.target.id === 'modal'
 document.addEventListener('click', function (e) {
   var f = e.target.closest('[data-flt]'); if (f) { flt = f.getAttribute('data-flt'); render(); return; }
   var row = e.target.closest('[data-uid]'); if (row && !e.target.closest('[data-act]')) { openPlayer(row.getAttribute('data-uid')); return; }
+  var ch = e.target.closest('[data-chat]'); if (ch) { chatUid = ch.getAttribute('data-chat'); var cc = (D.support || []).filter(function (c) { return c.u === chatUid; })[0]; if (cc && cc.meta.ua) { cc.meta.ua = false; req('PATCH', '/support/' + chatUid + '/meta', { ua: false }).catch(function () { }); supNotify(); } render(); return; }
   var b = e.target.closest('[data-act]'); if (!b) return;
   var a = b.getAttribute('data-act'), id = b.getAttribute('data-id'), p = openUid && D && D.byId[openUid];
   if (a === 'copy-id') copy(me || '');
@@ -404,6 +458,15 @@ document.addEventListener('click', function (e) {
   }
   else if (a === 'maint-off') act(req('DELETE', '/app/maint'), 'Техработы выключены');
   else if (a === 'export') copy('id;ник;тип;последний заход;уровень;партий;монет;ip\n' + D.players.map(function (q) { var pr = q.pr || {}; return [q.u, q.n, q.ty, q.s ? new Date(q.s).toLocaleString('ru-RU') : '', pr.lv || '', pr.pl || '', pr.co || '', q.ip].join(';'); }).join('\n'));
+  else if (a === 'chat-back') { chatUid = null; render(); }
+  else if (a === 'chat-q') { $('#cr').value = id; $('#cr').focus(); }
+  else if (a === 'chat-send') {
+    var tx = $('#cr').value.trim(); if (!tx || !chatUid) return;
+    $('#cr').value = '';
+    req('POST', '/support/' + chatUid + '/msgs', { f: 'a', x: tx.slice(0, 500), t: { '.sv': 'timestamp' } })
+      .then(function () { return req('PATCH', '/support/' + chatUid + '/meta', { uu: true, ua: false, last: { '.sv': 'timestamp' } }); })
+      .then(function () { toast('Ответ отправлен'); return pollSupport(); }, function (e2) { toast(e2 === 401 || e2 === 403 ? 'Нет прав: обнови правила базы (вкладка «Настройка»)' : 'Не отправилось'); });
+  }
   else if (a === 'promo-gen') $('#pc').value = genCode();
   else if (a === 'promo-copy') copy(id);
   else if (a === 'promo-del') act(req('DELETE', '/promos/' + id).then(function () { return req('DELETE', '/promoUses/' + id); }), 'Промокод удалён');
@@ -419,10 +482,22 @@ document.addEventListener('click', function (e) {
 });
 
 // правила базы (те же, что в firebase-rules.json); ADMIN_UID заменяется на ID этой админки
-var RULES = JSON.stringify({"rules": {"app": {".read": true, ".write": "auth != null && auth.uid === 'ADMIN_UID'"}, "lb": {".read": "auth != null", "$board": {".indexOn": ["s", "n"], "$uid": {".write": "auth != null && (auth.uid === 'ADMIN_UID' || (auth.uid === $uid && !root.child('bans').child(auth.uid).exists() && (!data.exists() || !newData.exists() || newData.child('s').val() >= data.child('s').val())))"}}}, "rooms": {".read": "auth != null", ".indexOn": ["g", "pub"], "$code": {".write": "auth != null && (auth.uid === 'ADMIN_UID' || !root.child('bans').child(auth.uid).exists())"}}, "bans": {".read": "auth != null", "$uid": {".write": "auth != null && auth.uid === 'ADMIN_UID'"}}, "profiles": {".read": "auth != null", "$uid": {".write": "auth != null && (auth.uid === 'ADMIN_UID' || (auth.uid === $uid && !root.child('bans').child(auth.uid).exists()))"}}, "badges": {".read": "auth != null", "$uid": {".write": "auth != null && auth.uid === 'ADMIN_UID'"}}, "friends": {".read": "auth != null", "$uid": {".write": "auth != null && (auth.uid === 'ADMIN_UID' || (auth.uid === $uid && !root.child('bans').child(auth.uid).exists()))"}}, "freq": {"$uid": {".read": "auth != null && (auth.uid === $uid || auth.uid === 'ADMIN_UID')", ".write": "auth != null && (auth.uid === $uid || auth.uid === 'ADMIN_UID')", "$from": {".write": "auth != null && (auth.uid === $from || auth.uid === $uid) && !root.child('bans').child(auth.uid).exists()"}}}, "ips": {".read": "auth != null && auth.uid === 'ADMIN_UID'", "$uid": {".write": "auth != null && (auth.uid === $uid || auth.uid === 'ADMIN_UID')"}}, "ipbans": {".read": "auth != null && auth.uid === 'ADMIN_UID'", "$ip": {".read": "auth != null", ".write": "auth != null && auth.uid === 'ADMIN_UID'"}}, "gifts": {"$uid": {".read": "auth != null && (auth.uid === $uid || auth.uid === 'ADMIN_UID')", ".write": "auth != null && (auth.uid === 'ADMIN_UID' || (auth.uid === $uid && !newData.exists()))"}}, "promos": {".read": "auth != null && auth.uid === 'ADMIN_UID'", "$h": {".read": "auth != null", ".write": "auth != null && auth.uid === 'ADMIN_UID'"}}, "promoUses": {".read": "auth != null && auth.uid === 'ADMIN_UID'", "$h": {".read": "auth != null", ".write": "auth != null && auth.uid === 'ADMIN_UID'", "$uid": {".write": "auth != null && auth.uid === $uid && !data.exists() && !root.child('bans').child(auth.uid).exists()"}}}, "deleted": {"$uid": {".read": "auth != null && (auth.uid === $uid || auth.uid === 'ADMIN_UID')", ".write": "auth != null && (auth.uid === 'ADMIN_UID' || (auth.uid === $uid && !newData.exists()))"}}, "noads": {".read": "auth != null && auth.uid === 'ADMIN_UID'", "$uid": {".read": "auth != null && (auth.uid === $uid || auth.uid === 'ADMIN_UID')", ".write": "auth != null && auth.uid === 'ADMIN_UID'"}}}}, null, 2);
+var RULES = JSON.stringify({"rules": {"app": {".read": true, ".write": "auth != null && auth.uid === 'ADMIN_UID'"}, "lb": {".read": "auth != null", "$board": {".indexOn": ["s", "n"], "$uid": {".write": "auth != null && (auth.uid === 'ADMIN_UID' || (auth.uid === $uid && !root.child('bans').child(auth.uid).exists() && (!data.exists() || !newData.exists() || newData.child('s').val() >= data.child('s').val())))"}}}, "rooms": {".read": "auth != null", ".indexOn": ["g", "pub"], "$code": {".write": "auth != null && (auth.uid === 'ADMIN_UID' || !root.child('bans').child(auth.uid).exists())"}}, "bans": {".read": "auth != null", "$uid": {".write": "auth != null && auth.uid === 'ADMIN_UID'"}}, "profiles": {".read": "auth != null", "$uid": {".write": "auth != null && (auth.uid === 'ADMIN_UID' || (auth.uid === $uid && !root.child('bans').child(auth.uid).exists()))"}}, "badges": {".read": "auth != null", "$uid": {".write": "auth != null && auth.uid === 'ADMIN_UID'"}}, "friends": {".read": "auth != null", "$uid": {".write": "auth != null && (auth.uid === 'ADMIN_UID' || (auth.uid === $uid && !root.child('bans').child(auth.uid).exists()))"}}, "freq": {"$uid": {".read": "auth != null && (auth.uid === $uid || auth.uid === 'ADMIN_UID')", ".write": "auth != null && (auth.uid === $uid || auth.uid === 'ADMIN_UID')", "$from": {".write": "auth != null && (auth.uid === $from || auth.uid === $uid) && !root.child('bans').child(auth.uid).exists()"}}}, "ips": {".read": "auth != null && auth.uid === 'ADMIN_UID'", "$uid": {".write": "auth != null && (auth.uid === $uid || auth.uid === 'ADMIN_UID')"}}, "ipbans": {".read": "auth != null && auth.uid === 'ADMIN_UID'", "$ip": {".read": "auth != null", ".write": "auth != null && auth.uid === 'ADMIN_UID'"}}, "gifts": {"$uid": {".read": "auth != null && (auth.uid === $uid || auth.uid === 'ADMIN_UID')", ".write": "auth != null && (auth.uid === 'ADMIN_UID' || (auth.uid === $uid && !newData.exists()))"}}, "promos": {".read": "auth != null && auth.uid === 'ADMIN_UID'", "$h": {".read": "auth != null", ".write": "auth != null && auth.uid === 'ADMIN_UID'"}}, "promoUses": {".read": "auth != null && auth.uid === 'ADMIN_UID'", "$h": {".read": "auth != null", ".write": "auth != null && auth.uid === 'ADMIN_UID'", "$uid": {".write": "auth != null && auth.uid === $uid && !data.exists() && !root.child('bans').child(auth.uid).exists()"}}}, "deleted": {"$uid": {".read": "auth != null && (auth.uid === $uid || auth.uid === 'ADMIN_UID')", ".write": "auth != null && (auth.uid === 'ADMIN_UID' || (auth.uid === $uid && !newData.exists()))"}}, "noads": {".read": "auth != null && auth.uid === 'ADMIN_UID'", "$uid": {".read": "auth != null && (auth.uid === $uid || auth.uid === 'ADMIN_UID')", ".write": "auth != null && auth.uid === 'ADMIN_UID'"}}, "support": {".read": "auth != null && auth.uid === 'ADMIN_UID'", "$uid": {".read": "auth != null && (auth.uid === $uid || auth.uid === 'ADMIN_UID')", ".write": "auth != null && (auth.uid === 'ADMIN_UID' || (auth.uid === $uid && !root.child('bans').child(auth.uid).exists()))", "msgs": {"$m": {".validate": "newData.child('x').isString() && newData.child('x').val().length <= 500"}}}}}}, null, 2);
 
-refresh();
-setInterval(function () { if (!document.hidden && !openUid) refresh(); }, 15000);
+// поддержка опрашивается чаще и отдельно: не сбивает набранный ответ
+function pollSupport() {
+  return req('GET', '/support').then(function (raw) {
+    if (!D) return; D.support = supList(raw); supNotify();
+    var un = supUnread(), cb = document.querySelector('[data-tab="chat"]'); if (cb) cb.innerHTML = '💬 Поддержка' + (un ? ' <span class="cnt">' + un + '</span>' : '');
+    if (tab === 'chat') {
+      if (chatUid) { var c = D.support.filter(function (x) { return x.u === chatUid; })[0], cl = $('#chatList'); if (c && cl) { var at = cl.scrollHeight - cl.scrollTop - cl.clientHeight < 40; cl.innerHTML = chatMsgsHtml(c); if (at) cl.scrollTop = cl.scrollHeight; if (c.meta.ua) req('PATCH', '/support/' + chatUid + '/meta', { ua: false }).catch(function () { }); } }
+      else render();
+    }
+  }).catch(function () { });
+}
+refresh().then(supNotify);
+setInterval(function () { if (!document.hidden && !openUid && tab !== 'chat') refresh().then(supNotify); }, 15000);
+setInterval(pollSupport, 8000);
 </script>
 </body>
 </html>

@@ -1257,7 +1257,7 @@
       '<button class="btn" data-set="close">' + t('set.done') + '</button>' +
       '<div class="ver">' + t('set.version') + ' 3.0</div>';
   }
-  var APP_CODE = 41, updInfo = null, updBarHidden = false;
+  var APP_CODE = 42, updInfo = null, updBarHidden = false;
   // обновление APK: в /app/latest лежит {code, name, notes, url}, админка публикует его кнопкой.
   // WebView приложения не умеет скачивать файлы сам, поэтому «Скачать» копирует ссылку для браузера
   function checkUpdate() {
@@ -1503,7 +1503,7 @@
       Online.req('GET', '/bans/' + me, undefined, function (e, v) { banAcc = !e && !!v; setBanned(); });
       Online.req('GET', '/badges/' + me, undefined, function (e, v) { if (!e) myBadges = v || {}; });
       Online.req('GET', '/noads/' + me, undefined, function (e, v) { noAds = !e && !!v; }); // админ отключил рекламу этому игроку
-      checkApp();
+      checkApp(); supCheck();
       // аккаунт удалён админом: снимаем метку и начинаем с чистого листа
       Online.req('GET', '/deleted/' + me, undefined, function (e, v) {
         if (e || !v) return;
@@ -1549,6 +1549,63 @@
     Sound.play(warn ? 'hit' : 'bonus');
   }
   document.addEventListener('click', function (e) { if (e.target.closest('[data-admx]')) { var el = document.getElementById('admNote'); if (el) el.remove(); if (noteQ.length) adminNote.apply(null, noteQ.shift()); } });
+  /* ---------- чат с поддержкой: support/{uid}/msgs — сообщения, support/{uid}/meta — ua/uu: непрочитано админом/игроком ---------- */
+  var supBtn = document.body.appendChild(Object.assign(document.createElement('button'), { id: 'supBtn', title: 'Поддержка', innerHTML: '💬<i></i>' }));
+  var supMsgs = [], supOpen = false, supT = 0, supUnread = false;
+  setInterval(function () { // кнопка видна только в меню
+    var show = App.state === 'menu' && !document.getElementById('acct') && !document.querySelector('.sheet.show') && !document.getElementById('maint');
+    supBtn.style.display = show ? '' : 'none'; supBtn.classList.toggle('dot', supUnread);
+    if (supOpen && Date.now() - supT > 8000) supLoad();
+  }, 500);
+  function supLoad() {
+    supT = Date.now();
+    Online.req('GET', '/support/' + Online.me + '/msgs', undefined, function (e, m) {
+      if (e) return;
+      supMsgs = Object.keys(m || {}).map(function (k) { return m[k]; }).sort(function (a, b) { return (a.t || 0) - (b.t || 0); });
+      supRender();
+      if (supUnread) { supUnread = false; Online.req('PATCH', '/support/' + Online.me + '/meta', { uu: false }); }
+    });
+  }
+  function supRender() {
+    var box = document.getElementById('supList'); if (!box) return;
+    var at = box.scrollHeight - box.scrollTop - box.clientHeight < 40;
+    box.innerHTML = '<div class="sup-m a">Привет! 👋 Напиши свой вопрос, предложение или сообщи об ошибке — администрация ответит здесь.</div>' +
+      supMsgs.map(function (m) { return '<div class="sup-m ' + (m.f === 'a' ? 'a' : 'u') + '">' + escapeHtml(m.x) + '<small>' + (m.t ? new Date(m.t).toLocaleString('ru-RU', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '…') + '</small></div>'; }).join('');
+    if (at || !supRender.done) box.scrollTop = box.scrollHeight; supRender.done = true;
+  }
+  function supShow() {
+    supOpen = true; supRender.done = false;
+    var el = document.body.appendChild(Object.assign(document.createElement('div'), { id: 'supModal' }));
+    el.innerHTML = '<div class="sup-card"><div class="sup-h"><b>💬 Поддержка</b><button class="upd-x" data-sup="close">✕</button></div><div id="supList"></div>' +
+      '<div class="sup-in"><textarea id="supTx" maxlength="500" rows="1" placeholder="Сообщение…"></textarea><button class="btn" data-sup="send">➤</button></div></div>';
+    supRender();
+    if (!Online.ok()) { api.toast('Нужен интернет'); return; }
+    Online.auth(function (tok) { if (tok) supLoad(); else api.toast('Нет связи с сервером'); });
+  }
+  function supSend() {
+    var tx = document.getElementById('supTx'), v = (tx.value || '').trim();
+    if (!v) return; if (v.length > 500) v = v.slice(0, 500);
+    tx.value = ''; supMsgs.push({ f: 'u', x: v }); supRender(); Sound.play('click');
+    Online.req('POST', '/support/' + Online.me + '/msgs', { f: 'u', x: v, t: { '.sv': 'timestamp' } }, function (e) {
+      if (e) { api.toast('Не отправилось, попробуй ещё раз'); return; }
+      Online.req('PATCH', '/support/' + Online.me + '/meta', { n: deviceName().slice(0, 16), a: avatar(), ua: true, uu: false, last: { '.sv': 'timestamp' }, lx: v.slice(0, 80) });
+      supLoad();
+    });
+  }
+  supBtn.addEventListener('click', function () { Sound.init(); Sound.play('click'); supShow(); });
+  document.addEventListener('click', function (e) {
+    var b = e.target.closest('[data-sup]'), m = document.getElementById('supModal');
+    if ((b && b.getAttribute('data-sup') === 'close') || (m && e.target === m)) { if (m) m.remove(); supOpen = false; return; }
+    if (b && b.getAttribute('data-sup') === 'send') supSend();
+  });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Enter' && !e.shiftKey && e.target && e.target.id === 'supTx') { e.preventDefault(); supSend(); } });
+  function supCheck() { // ответ поддержки: точка на кнопке и уведомление
+    Online.req('GET', '/support/' + Online.me + '/meta/uu', undefined, function (e, v) {
+      if (e) return;
+      if (v && !supUnread && !supOpen) { api.toast('💬 Поддержка ответила — нажми на кнопку чата'); Sound.play('bonus'); }
+      supUnread = !!v; if (v && supOpen) supLoad();
+    });
+  }
   // общие настройки из админки: app/news — объявление, app/event — множитель монет на время, app/maint — техработы
   var evMul = 1;
   function checkApp() {
