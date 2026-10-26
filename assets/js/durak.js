@@ -1,7 +1,7 @@
 /* Дурак (подкидной) против компьютера: 36 карт, козырь — масть последней карты колоды */
 window.GAMES = window.GAMES || {};
 window.GAMES.durak = {
-  title: 'Дурак', desc: 'Подкидной дурак против компьютера', cat: 'board', isNew4: true, medals: [100, 160, 240],
+  title: 'Дурак', desc: 'Подкидной дурак: с компьютером, вдвоём и онлайн', cat: 'board', isNew4: true, modes: true, lan: true, medals: [100, 160, 240],
   hint: 'Нажми на карту, чтобы походить или отбиться. Подкидывать можно карты того же достоинства, что уже на столе. Не можешь отбиться — «Беру». Всё отбито — «Бито». Кто первым избавится от карт после конца колоды — победил, оставшийся — дурак.',
   d0: 'Компьютер играет наугад', d1: 'Обычный соперник', d2: 'Бережёт козыри', d3: 'Сильный соперник',
   colors: ['#166534', '#14532d'], controls: 'none',
@@ -9,6 +9,9 @@ window.GAMES.durak = {
   create: function (api) {
     var SUITS = ['♠', '♣', '♥', '♦'], RANKS = ['6', '7', '8', '9', '10', 'В', 'Д', 'К', 'Т'];
     var discard, bubble, bubbleT, SPR = {};
+    // режимы: 0 — с компьютером; 1 — вдвоём на одном телефоне (экран «передай телефон», hands[0] всегда у того, кто держит телефон);
+    // 2 — онлайн: хост тасует колоду и присылает её, ходы приходят сообщениями вместо ходов бота
+    var viewer = 0, cover = false, netQ = [], rdyT = 0;
     var deck, hands, trump, trumpCard, att, table, phase, takeMode, botT, msg, msgT, over, sel;
     function red(c) { return c.s >= 2; }
     function name(c) { return RANKS[c.r] + SUITS[c.s]; }
@@ -25,11 +28,19 @@ window.GAMES.durak = {
     function deal() {
       deck = []; for (var s = 0; s < 4; s++) for (var r = 0; r < 9; r++) deck.push({ s: s, r: r });
       for (var i = deck.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)), x = deck[i]; deck[i] = deck[j]; deck[j] = x; }
+      if (api.mode === 2) api.net.send({ k: 'deck', d: deck.map(function (c) { return [c.s, c.r]; }) });
+      startWith(deck);
+    }
+    function guest() { return api.mode === 2 && api.net.side === 1; }
+    function startWith(dk) {
+      deck = dk; viewer = 0; cover = false;
       trumpCard = deck[0]; trump = trumpCard.s; hands = [[], []]; discard = [];
-      deck.forEach(function (cd) { cd.p = null; cd.flip = 0; }); draw(0); draw(1);
+      deck.forEach(function (cd) { cd.p = null; cd.flip = 0; });
+      if (guest()) { draw(1); draw(0); } else { draw(0); draw(1); } // хост набирает первым у обоих
       // первым ходит тот, у кого младший козырь
       function low(h) { var m = 99; h.forEach(function (c) { if (c.s === trump) m = Math.min(m, c.r); }); return m; }
-      att = low(hands[1]) < low(hands[0]) ? 1 : 0;
+      var l0 = low(hands[0]), l1 = low(hands[1]);
+      att = l1 < l0 ? 1 : l0 < l1 ? 0 : guest() ? 1 : 0; // без козырей у обоих ходит хост
       newRound();
     }
     function newRound() { table = []; table.limit = hands[1 - att].length; takeMode = false; phase = att === 0 ? 'attack' : 'bot'; botT = 0.8; }
@@ -46,9 +57,10 @@ window.GAMES.durak = {
       if (deck.length) return false;
       var e0 = !hands[0].length, e1 = !hands[1].length;
       if (!e0 && !e1) return false;
-      over = e0 && e1 ? 'draw' : e0 ? 'win' : 'lose'; phase = 'over'; botT = 1.6;
-      if (over === 'win') { api.addScore(100 + 20 * hands[1].length); api.sound('win'); api.fx.confetti(60); say('Победа! Соперник — дурак'); }
-      else if (over === 'draw') { api.addScore(50); say('Ничья'); }
+      over = e0 && e1 ? 'draw' : e0 ? 'win' : 'lose'; phase = 'over'; botT = 1.6; cover = false;
+      if (api.mode === 1) { var wp = over === 'draw' ? 0 : (over === 'win' ? viewer : 1 - viewer) + 1; api.sound('win'); api.fx.confetti(40); say(wp ? 'Игрок ' + wp + ' победил! Игрок ' + (3 - wp) + ' — дурак' : 'Ничья'); return true; }
+      if (over === 'win') { if (api.mode === 0) api.addScore(100 + 20 * hands[1].length); api.sound('win'); api.fx.confetti(60); say('Победа! Соперник — дурак'); }
+      else if (over === 'draw') { if (api.mode === 0) api.addScore(50); say('Ничья'); }
       else { api.sound('hit'); say('Ты остался дураком'); }
       return true;
     }
@@ -125,7 +137,7 @@ window.GAMES.durak = {
       discard.forEach(function (cd, k) { T.push([cd, discardPos(k), 0, 2]); });
       hands[1].forEach(function (cd, k) { T.push([cd, botPos(k, hands[1].length), over ? 1 : 0, 3]); });
       table.forEach(function (p, k) { T.push([p.a, tablePos(k, false), 1, 4]); if (p.d) T.push([p.d, tablePos(k, true), 1, 5]); });
-      hands[0].forEach(function (cd, k) { T.push([cd, handPos(k, hands[0].length), 1, 6]); });
+      hands[0].forEach(function (cd, k) { T.push([cd, handPos(k, hands[0].length), cover ? 0 : 1, 6]); });
       return T;
     }
     function playable(cd) {
@@ -134,17 +146,29 @@ window.GAMES.durak = {
       return false;
     }
     function buttons() {
-      var b = [], y = api.H - 62, w = 150;
+      var b = [], y = api.H - 62, w = 150; if (cover) return b;
       if (phase === 'defend') b.push({ k: 'take', t: 'Беру', x: api.W / 2 - w / 2, y: y, w: w, c: ['#ef4444', '#b91c1c'] });
       if (phase === 'attack' && table.length && (takeMode || !undefended().length)) b.push({ k: 'done', t: takeMode ? 'Хватит' : 'Бито', x: api.W / 2 - w / 2, y: y, w: w, c: ['#3b82f6', '#1d4ed8'] });
       return b;
+    }
+    function send(m) { if (api.mode === 2) api.net.send(m); }
+    function remoteMsg(m) { // ход соперника по сети — то же, что делал бот
+      var c = m.k === 'c' ? hands[1].filter(function (q) { return q.s === m.s && q.r === m.r; })[0] : null;
+      if (m.k === 'c' && c && phase === 'bot') { remove(hands[1], c); table.push({ a: c, d: null }); api.sound('click'); if (!takeMode) phase = 'defend'; }
+      else if (m.k === 'c' && c && phase === 'botdef' && table[m.ti] && !table[m.ti].d) { remove(hands[1], c); table[m.ti].d = c; api.sound('click'); if (!undefended().length) phase = 'attack'; }
+      else if (m.k === 'take' && phase === 'botdef') { takeMode = true; botSay('Беру!'); say('Можешь подкинуть'); phase = 'attack'; }
+      else if (m.k === 'done' && phase === 'bot') { if (!takeMode) botSay('Бито'); endRound(takeMode); }
+    }
+    // вдвоём: ход другого игрока — переворачиваем стол к нему и закрываем карты до нажатия
+    function swapView() {
+      hands.reverse(); att = 1 - att; viewer = 1 - viewer; phase = phase === 'bot' ? 'attack' : 'defend'; cover = true; sel = -1;
     }
     function playHuman(i) {
       var c = hands[0][i];
       if (phase === 'attack') {
         if (!canAdd(c)) { say('Подкидывать можно только карты того же достоинства'); api.sound('hit'); return; }
         if (table.length >= limit()) { say('Больше подкинуть нельзя'); return; }
-        remove(hands[0], c); table.push({ a: c, d: null }); api.sound('click');
+        remove(hands[0], c); table.push({ a: c, d: null }); api.sound('click'); send({ k: 'c', s: c.s, r: c.r });
         if (!takeMode) { phase = 'botdef'; botT = 0.8; }
         return;
       }
@@ -152,7 +176,7 @@ window.GAMES.durak = {
         var u = undefended(), tgt = null;
         for (var k = 0; k < u.length; k++) if (beats(c, u[k])) { tgt = u[k]; break; }
         if (!tgt) { say('Этой картой не побить'); api.sound('hit'); return; }
-        remove(hands[0], c); tgt.d = c; api.sound('click');
+        remove(hands[0], c); tgt.d = c; api.sound('click'); send({ k: 'c', s: c.s, r: c.r, ti: table.indexOf(tgt) });
         if (!undefended().length) { phase = 'bot'; botT = 0.8; }
       }
     }
@@ -238,14 +262,19 @@ window.GAMES.durak = {
       SPR[key] = o; return o;
     }
     return {
-      reset: function () { over = null; msg = ''; msgT = 0; sel = -1; bubble = ''; bubbleT = 0; deal(); botT = 1.6; },
+      reset: function () {
+        over = null; msg = ''; msgT = 0; sel = -1; bubble = ''; bubbleT = 0; netQ = []; rdyT = 0;
+        if (api.mode === 2) { phase = 'sync'; hands = [[], []]; deck = []; table = []; discard = []; trump = 0; trumpCard = { s: 0, r: 0 }; } else { deal(); botT = 1.6; }
+      },
+      netMsg: function (d) { netQ.push(d); },
       resize: function () { }, idle: function () { }, key: function () { },
       input: function (type, d) {
-        if (type !== 'tap' || phase === 'over' || phase === 'done') return;
+        if (type !== 'tap' || phase === 'over' || phase === 'done' || phase === 'sync') return;
+        if (cover) { cover = false; api.sound('click'); return; }
         var b = buttons();
         for (var q = 0; q < b.length; q++) if (d.x > b[q].x && d.x < b[q].x + b[q].w && d.y > b[q].y && d.y < b[q].y + 46) {
-          if (b[q].k === 'take') { takeMode = true; phase = 'bot'; botT = 0.6; say('Беру'); }
-          else { if (!takeMode) botSay('Эх…'); endRound(takeMode); }
+          if (b[q].k === 'take') { send({ k: 'take' }); takeMode = true; phase = 'bot'; botT = 0.6; say('Беру'); }
+          else { send({ k: 'done' }); if (!takeMode && api.mode === 0) botSay('Эх…'); endRound(takeMode); }
           api.sound('click'); return;
         }
         if (phase !== 'attack' && phase !== 'defend') return;
@@ -263,7 +292,15 @@ window.GAMES.durak = {
           cd.flip += ((T[2] ? 1 : 0) - cd.flip) * Math.min(1, dt * 10);
         });
         if (phase === 'over') { botT -= dt; if (botT <= 0) { phase = 'done'; api.gameOver(); } return; }
-        if (phase === 'bot' || phase === 'botdef') { botT -= dt; if (botT <= 0) { botT = 0.7; botStep(); } }
+        if (api.mode === 2) {
+          if (phase === 'sync') { // гость просит колоду, хост раздаёт
+            if (guest()) { rdyT -= dt; if (rdyT <= 0) { rdyT = 1; api.net.send({ k: 'rdy' }); } }
+            while (netQ.length) { var nm = netQ.shift(); if (nm.k === 'rdy' && !guest()) { netQ = []; deal(); botT = 1; break; } if (nm.k === 'deck' && guest()) { startWith(nm.d.map(function (q) { return { s: q[0], r: q[1] }; })); break; } }
+            return;
+          }
+          while (netQ.length && (phase === 'bot' || phase === 'botdef')) remoteMsg(netQ.shift());
+        } else if (api.mode === 1) { if (phase === 'bot' || phase === 'botdef') swapView(); }
+        else if (phase === 'bot' || phase === 'botdef') { botT -= dt; if (botT <= 0) { botT = 0.7; botStep(); } }
         if (phase !== 'over' && phase !== 'done') checkEnd();
       },
       draw: function (c) {
@@ -278,7 +315,7 @@ window.GAMES.durak = {
         c.fillStyle = '#ef4444'; c.beginPath(); c.arc(0, -16, 3, 0, 6.283); c.fill(); c.fillStyle = '#64748b'; c.fillRect(-1, -14, 2, 4);
         c.restore();
         c.fillStyle = '#ecfdf5'; c.font = '700 12px system-ui'; c.textAlign = 'center'; c.textBaseline = 'middle';
-        c.fillText('Бот · ' + hands[1].length, 36, 82);
+        c.fillText((api.mode === 1 ? 'Игрок ' + (2 - viewer) : api.mode === 2 ? 'Соперник' : 'Бот') + ' · ' + hands[1].length, 36, 82);
         // козырь и колода — подписи
         var dp = deckPos();
         c.fillStyle = '#ecfdf5'; c.font = '700 12px system-ui';
@@ -313,7 +350,9 @@ window.GAMES.durak = {
           c.fillStyle = '#111827'; c.textAlign = 'left'; c.fillText(bubble, 76, 35); c.globalAlpha = 1;
         }
         // подсказка хода и кнопки
-        var who = phase === 'attack' ? (takeMode ? 'Подкидывай или «Хватит»' : table.length ? 'Подкинь или нажми «Бито»' : 'Твой ход') : phase === 'defend' ? 'Отбивайся!' : thinking ? 'Бот думает…' : '';
+        var who; if (phase === 'sync') who = 'Ждём соперника…'; else
+        who = (api.mode === 1 && (phase === 'attack' || phase === 'defend') ? 'Игрок ' + (viewer + 1) + ': ' : '') + (phase === 'attack' ? (takeMode ? 'Подкидывай или «Хватит»' : table.length ? 'Подкинь или нажми «Бито»' : 'Твой ход') : phase === 'defend' ? 'Отбивайся!' : thinking ? (api.mode === 2 ? 'Соперник думает…' : 'Бот думает…') : '');
+        if (cover) who = '';
         var hy = handPos(0, Math.max(1, hands[0].length)).y - (hands[0].length > 14 ? CH() * 0.5 : 0) - 26;
         c.fillStyle = '#fef08a'; c.font = '800 15px system-ui'; c.textAlign = 'center'; c.fillText(who, W / 2, hy);
         buttons().forEach(function (b) {
@@ -328,6 +367,12 @@ window.GAMES.durak = {
           var mw = Math.min(W - 20, c.measureText(msg).width + 40);
           c.fillStyle = 'rgba(0,0,0,.72)'; c.beginPath(); c.roundRect ? c.roundRect(W / 2 - mw / 2, H * 0.155 - 18, mw, 36, 18) : c.rect(W / 2 - mw / 2, H * 0.155 - 18, mw, 36); c.fill();
           c.fillStyle = '#fff'; c.fillText(msg, W / 2, H * 0.155); c.globalAlpha = 1;
+        }
+        if (cover) { // вдвоём: карты закрыты, пока игрок не возьмёт телефон
+          c.fillStyle = 'rgba(2,6,23,.55)'; c.fillRect(0, H * 0.62, W, H * 0.38);
+          c.fillStyle = 'rgba(0,0,0,.8)'; c.beginPath(); c.roundRect ? c.roundRect(W / 2 - 150, H * 0.66, 300, 84, 20) : c.rect(W / 2 - 150, H * 0.66, 300, 84); c.fill();
+          c.fillStyle = '#fde68a'; c.font = '900 18px system-ui'; c.textAlign = 'center'; c.fillText('Ход Игрока ' + (viewer + 1), W / 2, H * 0.66 + 30);
+          c.fillStyle = '#e7e5e4'; c.font = '700 14px system-ui'; c.fillText('Передай телефон и нажми, чтобы открыть карты', W / 2, H * 0.66 + 58);
         }
       }
     };

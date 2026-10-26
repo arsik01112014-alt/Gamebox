@@ -269,7 +269,10 @@ window.GAMES.chess = {
     var promo = null, netQ = [], pos, sel, targets, last, animM, phase, msg, thinking, token = 0, hist, capW, capB, sprites, cs, bx, by, t, endT, result, checkSq;
     // v2.0: подсказки 💡 и отмена хода на лёгкой и нормальной сложности
     var hints = 0, undos = 0, hintM = null;
-    function canUndo() { return api.mode === 0 && undos > 0 && hist.length >= 2 && phase === 'play' && !thinking; }
+    // v4.8: отмена/возврат хода, ничья, сдаться. ask — запрос, на который отвечают «Принять/Отклонить»; fut — отменённые ходы для «Вперёд»
+    var fut = [], ask = null, askT = 0, note = '', noteT = 0;
+    function say(s2) { note = s2; noteT = 2.2; }
+    function canUndo() { return api.mode !== 2 && undos > 0 && hist.length >= (api.mode === 0 ? 2 : 1) && phase === 'play' && !thinking && !ask; }
     function canHint() { return api.mode === 0 && hints > 0 && phase === 'play' && !thinking && pos.side === 'w'; }
     function giveHint() {
       if (!canHint()) return;
@@ -465,7 +468,8 @@ window.GAMES.chess = {
         } else if (api.mode === 1) api.sound('win');
       } else if (checkSq >= 0) { api.sound('bonus'); api.vibrate(40); }
     }
-    function doMove(m, remote) {
+    function doMove(m, remote, keepFut) {
+      if (!keepFut) fut = [];
       if (api.mode === 2 && !remote) api.net.send({ f: m.f, t: m.t, p: m.promo || '' });
       var u = pos.make(m);
       hist.push({ m: m, u: u });
@@ -492,23 +496,72 @@ window.GAMES.chess = {
       var s2 = cs * 1.15, gap = 8, total = s2 * 4 + gap * 3, x0 = (api.W - total) / 2, y0 = by + cs * 4 - s2 / 2;
       return ['q', 'r', 'b', 'n'].map(function (p, k) { return { p: p, x: x0 + k * (s2 + gap), y: y0, s: s2 }; });
     }
-    function undo() {
-      if (!canUndo()) return;
-      undos--; hintM = null;
-      for (var k = 0; k < 2; k++) {
-        var h = hist.pop(); pos.unmake(h.m, h.u);
+    function back(n) { // снять n последних ходов
+      for (var k = 0; k < n && hist.length; k++) {
+        var h = hist.pop(); pos.unmake(h.m, h.u); fut.push(h.m);
         if (h.m.cap) (colorOf(h.m.cap) === 'w' ? capW : capB).pop();
       }
-      last = hist.length ? hist[hist.length - 1].m : null; sel = -1; targets = []; animM = null; phase = 'play';
+      last = hist.length ? hist[hist.length - 1].m : null; sel = -1; targets = []; animM = null; phase = 'play'; promo = null; hintM = null;
       status(); api.sound('rotate');
     }
+    function undo() { if (!canUndo()) return; undos--; back(api.mode === 0 ? (pos.side === 'w' ? 2 : 1) : 1); }
+    function canRedo() { return api.mode !== 2 && fut.length > 0 && phase === 'play' && !thinking && !ask; }
+    function redo() { // вернуть отменённый ход (против компьютера — вместе с его ответом)
+      if (!canRedo()) return;
+      var n = api.mode === 0 ? Math.min(2, fut.length) : 1, keep = fut;
+      for (var k = 0; k < n; k++) { var m = keep.pop(), lm = pos.legal().filter(function (q) { return q.f === m.f && q.t === m.t && (q.promo || '') === (m.promo || ''); })[0]; if (!lm) { keep.length = 0; break; } fut = keep; doMove(lm, false, true); }
+      fut = keep;
+    }
+    function finish(res, why) { // ничья по согласию или сдача
+      phase = 'over'; result = res; msg = why; endT = 2.6; ask = null; sel = -1; targets = [];
+      if (api.mode === 0 && res === 'd') { api.addScore(300 * (api.diff + 1)); api.sound('point'); }
+      else api.sound(api.mode === 1 ? 'win' : res === myColor() ? 'win' : res === 'd' ? 'point' : 'over');
+    }
+    function offerDraw() {
+      if (phase !== 'play' || ask || thinking) return;
+      if (api.mode === 0) { // компьютер соглашается, только если ему хуже или позиция давно равная
+        var v = pos.evaluate() * (pos.side === 'b' ? 1 : -1);
+        if (v < -150 || (Math.abs(v) < 60 && hist.length > 60)) finish('d', 'Ничья по согласию'); else say('Компьютер отказался от ничьей');
+        return;
+      }
+      if (api.mode === 2) { api.net.send({ k: 'draw' }); say('Ничья предложена, ждём ответа…'); return; }
+      ask = { k: 'draw', from: pos.side, txt: (pos.side === 'w' ? 'Белые' : 'Чёрные') + ' предлагают ничью' };
+    }
+    function resign() {
+      if (phase !== 'play') return;
+      if (Date.now() - (resign.t || 0) > 3000) { resign.t = Date.now(); say('Нажми ещё раз, чтобы сдаться'); return; }
+      var loser = api.mode === 2 ? myColor() : api.mode === 0 ? 'w' : pos.side;
+      if (api.mode === 2) api.net.send({ k: 'resign' });
+      finish(loser === 'w' ? 'b' : 'w', (loser === 'w' ? 'Белые' : 'Чёрные') + ' сдались');
+    }
+    function askTakeback() { if (phase !== 'play' || !hist.length || ask) return; api.net.send({ k: 'tb' }); say('Просьба вернуть ход отправлена…'); }
+    function answer(yes) {
+      var a = ask; ask = null; if (!a) return;
+      if (a.k === 'draw') { if (api.mode === 2) api.net.send({ k: yes ? 'drawok' : 'drawno' }); if (yes) finish('d', 'Ничья по согласию'); else say('Ничья отклонена'); }
+      if (a.k === 'tb') {
+        // если сейчас ход того, кто просит, — снимаем и его ход, и ответ
+        var n = pos.side === myColor() ? 1 : 2; n = Math.min(n, hist.length);
+        api.net.send({ k: yes ? 'tbok' : 'tbno', n: n }); if (yes) back(n); else say('Возврат хода отклонён');
+      }
+    }
+    function bar() { // кнопки под доской
+      var L = api.mode === 0 ? ['undo', 'redo', 'hint', 'draw', 'resign'] : api.mode === 1 ? ['undo', 'redo', 'draw', 'resign'] : ['tb', 'draw', 'resign'];
+      var w = (api.W - 24 - (L.length - 1) * 6) / L.length, y = by + 8 * cs + 22;
+      return L.map(function (k, i) { return { k: k, x: 12 + i * (w + 6), y: y, w: w, h: 36 }; });
+    }
+    function btnLabel(k) {
+      return k === 'undo' ? '↶ Назад' + (api.mode === 0 && undos < 50 ? ' ' + undos : '') : k === 'redo' ? '↷ Вперёд' : k === 'hint' ? '💡 ' + hints : k === 'draw' ? '½ Ничья' : k === 'resign' ? '🏳 Сдаться' : '↶ Вернуть ход';
+    }
+    function btnOn(k) { return k === 'undo' ? canUndo() : k === 'redo' ? canRedo() : k === 'hint' ? canHint() : k === 'tb' ? phase === 'play' && hist.length > 0 && !ask : phase === 'play' && !thinking && !ask; }
+    function askRects() { var w = Math.min(300, api.W - 40), x = (api.W - w) / 2, y = by + cs * 4 - 60; return { box: [x, y, w, 120], yes: [x + 12, y + 64, w / 2 - 18, 42], no: [x + w / 2 + 6, y + 64, w / 2 - 18, 42] }; }
+    function hit(r, d) { return d.x >= r[0] && d.x <= r[0] + r[2] && d.y >= r[1] && d.y <= r[1] + r[3]; }
 
     return {
       reset: function () {
         token++;
         pos = new CC.Pos(); sel = -1; targets = []; last = null; animM = null; phase = 'play'; msg = ''; thinking = false;
         hist = []; capW = []; capB = []; t = 0; endT = 0; result = null; checkSq = -1; promo = null; netQ = [];
-        hints = [5, 3, 1, 0][api.diff]; undos = [99, 3, 0, 0][api.diff]; hintM = null;
+        hints = [5, 3, 1, 0][api.diff]; undos = api.mode === 0 ? [99, 99, 5, 3][api.diff] : 999; hintM = null; fut = []; ask = null; note = ''; noteT = 0;
         layout();
       },
       destroy: function () { token++; },
@@ -518,14 +571,20 @@ window.GAMES.chess = {
       idle: function (dt) { t += dt; },
       key: function () { },
       input: function (type, d) {
-        if (type !== 'tap' || phase !== 'play' || thinking || cpuTurn() || remoteTurn()) return;
+        if (type !== 'tap' || phase !== 'play') return;
+        if (ask) { var ar = askRects(); if (hit(ar.yes, d)) answer(true); else if (hit(ar.no, d)) answer(false); return; }
+        var bb = bar().filter(function (b) { return hit([b.x, b.y, b.w, b.h], d); })[0];
+        if (bb) {
+          if (!btnOn(bb.k)) return; api.sound('click');
+          if (bb.k === 'undo') undo(); else if (bb.k === 'redo') redo(); else if (bb.k === 'hint') giveHint(); else if (bb.k === 'draw') offerDraw(); else if (bb.k === 'resign') resign(); else askTakeback();
+          return;
+        }
+        if (thinking || cpuTurn() || remoteTurn()) return;
         if (promo) { // выбор фигуры для превращения
           var pk = promoRects().filter(function (q) { return d.x >= q.x && d.x <= q.x + q.s && d.y >= q.y && d.y <= q.y + q.s; })[0];
           if (pk) doMove(promo.moves.filter(function (m) { return m.promo.toLowerCase() === pk.p; })[0]);
           promo = null; return;
         }
-        if (canUndo() && d.y > by + 8 * cs + 8 && d.x > api.W - 120) { undo(); return; }
-        if (canHint() && d.y > by + 8 * cs + 8 && d.x < 120) { giveHint(); return; }
         var c = Math.floor((d.x - bx) / cs), r = Math.floor((d.y - by) / cs);
         if (c < 0 || r < 0 || c > 7 || r > 7) return;
         var i = r * 8 + c; if (flipped()) i = 63 - i;
@@ -546,6 +605,19 @@ window.GAMES.chess = {
         if (animM) { animM.k += dt / 0.18; if (animM.k >= 1) animM = null; }
         if (endT > 0) { endT -= dt; if (endT <= 0) api.gameOver(); return; }
         if (cpuTurn() && !thinking && !animM) startThink();
+        if (noteT > 0) noteT -= dt;
+        // служебные сообщения соперника (ничья, возврат хода, сдача) обрабатываем в любой момент
+        for (var qi = netQ.length - 1; qi >= 0; qi--) {
+          var cm = netQ[qi]; if (!cm.k) continue; netQ.splice(qi, 1);
+          if (phase !== 'play') continue;
+          if (cm.k === 'draw') ask = { k: 'draw', txt: 'Соперник предлагает ничью' };
+          else if (cm.k === 'tb') ask = { k: 'tb', txt: 'Соперник просит вернуть ход' };
+          else if (cm.k === 'drawok') finish('d', 'Ничья по согласию');
+          else if (cm.k === 'drawno') say('Соперник отказался от ничьей');
+          else if (cm.k === 'tbok') back(cm.n || 1);
+          else if (cm.k === 'tbno') say('Соперник не разрешил вернуть ход');
+          else if (cm.k === 'resign') finish(myColor(), 'Соперник сдался');
+        }
         if (remoteTurn() && netQ.length && !animM) {
           var nd = netQ.shift(), lm = pos.legal().filter(function (m) { return m.f === nd.f && m.t === nd.t && (m.promo || '') === nd.p; })[0];
           if (lm) doMove(lm, true);
@@ -614,11 +686,24 @@ window.GAMES.chess = {
             c.drawImage(pieceSprite(col === 'w' ? q.p.toUpperCase() : q.p), q.x, q.y, q.s, q.s);
           });
         }
-        if (canUndo()) {
+        bar().forEach(function (b) {
+          var on = btnOn(b.k), warm = b.k === 'resign' ? 'rgba(239,68,68,.25)' : b.k === 'hint' ? 'rgba(253,224,71,.2)' : 'rgba(255,255,255,.12)';
+          c.globalAlpha = on ? 1 : 0.35; c.fillStyle = warm; c.beginPath(); c.roundRect ? c.roundRect(b.x, b.y, b.w, b.h, 18) : c.rect(b.x, b.y, b.w, b.h); c.fill();
+          c.fillStyle = b.k === 'hint' ? '#fde047' : b.k === 'resign' ? '#fca5a5' : '#e7e5e4'; c.font = '800 ' + (b.w < 80 ? 12 : 13) + 'px system-ui, sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle';
+          c.fillText(btnLabel(b.k), b.x + b.w / 2, b.y + b.h / 2 + 1); c.globalAlpha = 1;
+        });
+        if (noteT > 0) { c.globalAlpha = Math.min(1, noteT * 2); c.font = '800 14px system-ui, sans-serif'; var nw = c.measureText(note).width + 30; c.fillStyle = 'rgba(0,0,0,.75)'; c.beginPath(); c.roundRect ? c.roundRect(W / 2 - nw / 2, by + cs * 4 - 18, nw, 36, 18) : c.rect(W / 2 - nw / 2, by + cs * 4 - 18, nw, 36); c.fill(); c.fillStyle = '#fff'; c.fillText(note, W / 2, by + cs * 4 + 1); c.globalAlpha = 1; }
+        if (ask) {
+          var ar = askRects(); c.fillStyle = 'rgba(0,0,0,.55)'; c.fillRect(bx, by, cs * 8, cs * 8);
+          c.fillStyle = '#f5f5f4'; c.beginPath(); c.roundRect ? c.roundRect(ar.box[0], ar.box[1], ar.box[2], ar.box[3], 16) : c.rect(ar.box[0], ar.box[1], ar.box[2], ar.box[3]); c.fill();
+          c.fillStyle = '#1c1917'; c.font = '800 16px system-ui, sans-serif'; c.textAlign = 'center'; c.fillText(ask.txt, W / 2, ar.box[1] + 34);
+          [[ar.yes, '#16a34a', 'Принять'], [ar.no, '#dc2626', 'Отклонить']].forEach(function (q) { c.fillStyle = q[1]; c.beginPath(); c.roundRect ? c.roundRect(q[0][0], q[0][1], q[0][2], q[0][3], 12) : c.rect(q[0][0], q[0][1], q[0][2], q[0][3]); c.fill(); c.fillStyle = '#fff'; c.fillText(q[2], q[0][0] + q[0][2] / 2, q[0][1] + q[0][3] / 2 + 1); });
+        }
+        if (false) {
           c.fillStyle = 'rgba(255,255,255,.1)'; c.beginPath(); c.roundRect ? c.roundRect(W - 116, by + 8 * cs + 12, 104, 34, 17) : c.rect(W - 116, by + 8 * cs + 12, 104, 34); c.fill();
           c.fillStyle = '#e7e5e4'; c.font = '800 13px system-ui, sans-serif'; c.fillText('↶ ' + api.t('g.undo') + (undos < 50 ? ' ' + undos : ''), W - 64, by + 8 * cs + 29);
         }
-        if (canHint()) {
+        if (false) {
           c.fillStyle = 'rgba(253,224,71,.2)'; c.beginPath(); c.roundRect ? c.roundRect(12, by + 8 * cs + 12, 104, 34, 17) : c.rect(12, by + 8 * cs + 12, 104, 34); c.fill();
           c.fillStyle = '#fde047'; c.font = '800 13px system-ui, sans-serif'; c.fillText('💡 ' + api.t('g.hint') + ' ' + hints, 64, by + 8 * cs + 29);
         }
