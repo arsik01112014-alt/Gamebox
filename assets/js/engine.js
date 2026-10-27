@@ -1263,7 +1263,7 @@
       '<button class="btn" data-set="close">' + t('set.done') + '</button>' +
       '<div class="ver">' + t('set.version') + ' ' + APP_NAME + '</div>';
   }
-  var APP_NAME = '4.8', APP_CODE = 48, updInfo = null, updBarHidden = false;
+  var APP_NAME = '4.9', APP_CODE = 49, updInfo = null, updBarHidden = false;
   // обновление APK: в /app/latest лежит {code, name, notes, url}, админка публикует его кнопкой.
   // WebView приложения не умеет скачивать файлы сам, поэтому «Скачать» копирует ссылку для браузера
   function checkUpdate() {
@@ -1521,12 +1521,13 @@
       Online.req('GET', '/gifts/' + me, undefined, function (e, g) {
         if (e || !g) return;
         // в подарке может быть: c — монеты, m — сообщение, w — предупреждение, n — новый ник, x — опыт, un — открыть игру (all — все)
-        var sum = 0, msg = '', warn = false, nn = '', xp = 0, un = [];
+        var sum = 0, msg = '', warn = false, nn = '', xp = 0, un = [], rs = false;
         Object.keys(g).forEach(function (k) {
-          var v = g[k] || {}; sum += +v.c || 0; xp += +v.x || 0; msg = msg || v.m || ''; if (v.w) warn = true; if (v.n) nn = String(v.n).slice(0, 16); if (v.un) un.push(v.un);
+          var v = g[k] || {}; sum += +v.c || 0; xp += +v.x || 0; msg = msg || v.m || ''; if (v.w) warn = true; if (v.n) nn = String(v.n).slice(0, 16); if (v.un) un.push(v.un); if (v.rs) rs = true;
         });
         Online.req('DELETE', '/gifts/' + me, undefined, function (e2) {
           if (e2) return;
+          if (rs) { store.set('coins', 0); store.set('xp', 0); } // админ обнулил монеты и опыт
           if (nn) { store.set('netName', nn); }
           if (xp) store.set('xp', Math.max(0, store.get('xp', 0) + xp));
           un.forEach(function (id) { var ids = id === 'all' ? Object.keys(LOCKED) : [id]; store.set('unlocked', store.get('unlocked', []).concat(ids.filter(function (x) { return LOCKED[x]; }))); });
@@ -1537,6 +1538,7 @@
           if (xp) parts.push('+' + xp + ' XP');
           if (un.length) parts.push('открыты игры');
           if (nn) parts.push('ник изменён на «' + nn + '»');
+          if (rs) parts.push('монеты и опыт обнулены');
           if (warn || msg || parts.length) adminNote(warn ? '⚠️ Предупреждение' : '📩 Сообщение от администрации', (msg ? msg : '') + (parts.length ? (msg ? '\n\n' : '') + parts.join(', ') : ''), warn);
         });
       });

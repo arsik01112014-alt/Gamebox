@@ -80,7 +80,8 @@ var FB = { key: 'AIzaSyDglJuu3uT8vIrAsLByo8cqMWywbS1rgxw', db: 'https://gamebox-
 var ONLINE_MS = 3 * 60 * 1000, ROOM_MS = 45000;
 var BADGES = { creator: ['👑', 'Создатель'], admin: ['🛡️', 'Админ'], moder: ['🔨', 'Модератор'], tester: ['🧪', 'Тестер'], vip: ['💎', 'VIP'], verified: ['✅', 'Проверен'] };
 var TABS = [['home', '📊 Обзор'], ['chat', '💬 Поддержка'], ['players', '👥 Игроки'], ['bans', '🚫 Баны'], ['rooms', '🎮 Комнаты'], ['top', '🏆 Рейтинг'], ['promos', '🎁 Промокоды'], ['news', '📢 Рассылка'], ['stats', '📈 Статистика'], ['setup', '⚙️ Настройка']];
-var FILTERS = [['all', 'Все'], ['on', 'Онлайн'], ['guest', 'Гости'], ['google', 'Google'], ['ban', 'Забанены'], ['badge', 'Со значками']];
+var FILTERS = [['all', 'Все'], ['on', 'Онлайн'], ['sus', '⚠️ Подозрительные'], ['guest', 'Гости'], ['google', 'Google'], ['ban', 'Забанены'], ['badge', 'Со значками']];
+var SORTS = [['seen', 'Недавние'], ['lv', 'Уровень'], ['co', 'Монеты'], ['pl', 'Партии'], ['new', 'Новые']], srt = 'seen';
 var tab = 'home', flt = 'all', query = '', D = null, me = null, openUid = null, chatUid = null, seenSup = null;
 
 function $(s) { return document.querySelector(s); }
@@ -155,7 +156,7 @@ function req(method, path, body) {
     return fetch(FB.db + path + '.json?auth=' + encodeURIComponent(tok), o).then(function (r) { if (!r.ok) throw r.status; return r.json(); });
   });
 }
-function act(p, okMsg) { return p.then(function () { toast(okMsg); return refresh(); }, function (e) { toast(e === 401 || e === 403 ? 'Нет прав: обнови правила базы (вкладка «Настройка»)' : 'Ошибка: ' + e); }); }
+function act(p, okMsg) { return p.then(function () { toast(okMsg); logAct(okMsg + (openUid && D && D.byId[openUid] ? ' · ' + (D.byId[openUid].n || openUid.slice(0, 8)) : '')); return refresh(); }, function (e) { toast(e === 401 || e === 403 ? 'Нет прав: обнови правила базы (вкладка «Настройка»)' : 'Ошибка: ' + e); }); }
 
 function load() {
   var paths = ['/lb', '/rooms', '/bans', '/profiles', '/badges', '/ips', '/ipbans', '/promos', '/promoUses', '/noads', '/app', '/support', '/adminNotes'];
@@ -264,7 +265,7 @@ function render() {
       }).join('') : '<p class="note">Нет.</p>') +
       '<p class="note">Бан по IP закрывает игру всем, кто заходит с этого адреса. У мобильного интернета адрес часто меняется и бывает общим у многих людей, поэтому надёжнее бан аккаунта.</p>';
   } else if (tab === 'rooms') {
-    v.innerHTML = warn + (D.rooms.length ? D.rooms.map(function (r) {
+    v.innerHTML = warn + (D.rooms.length ? '<button class="red" data-act="closeall" style="width:100%;margin-bottom:8px">✕ Закрыть все комнаты (' + D.rooms.length + ')</button>' : '') + (D.rooms.length ? D.rooms.map(function (r) {
       var live = now - r.last < ROOM_MS;
       return '<div class="row"><div class="av">🎮<i class="' + (live ? 'on' : '') + '"></i></div><div class="m"><b>' + esc(r.g || '?') + ' · ' + esc(r.code) + (r.pub ? '' : ' <span class="chip">приватная</span>') + '</b>' +
         '<small>' + GBAV.html(r.h.a) + ' ' + esc(r.h.n || '?') + (r.c ? ' vs ' + GBAV.html(r.c.a) + ' ' + esc(r.c.n || '?') : ' · ждёт соперника') + ' · ' + ago(r.last) + '</small></div>' +
@@ -324,6 +325,11 @@ function render() {
         return '<div class="row"><div class="m"><b>' + esc(g) + '</b><div style="height:8px;border-radius:4px;background:rgba(255,255,255,.1);margin-top:6px"><div style="height:8px;border-radius:4px;width:' + Math.round(games[g] / maxG * 100) + '%;background:linear-gradient(90deg,#22c55e,#facc15)"></div></div></div><b>' + games[g] + '</b></div>';
       }).join('') +
       '<button class="sec" data-act="export" style="width:100%;margin-top:12px">📋 Скопировать список игроков (CSV)</button>' +
+      '<h2>⚠️ Подозрительные игроки (' + P.filter(function (p) { return suspicion(p).length; }).length + ')</h2>' + (P.filter(function (p) { return suspicion(p).length; }).slice(0, 15).map(function (p) {
+        return '<div class="row click" data-uid="' + esc(p.u) + '"><div class="av">' + GBAV.html(p.a || 'i:kid') + '</div><div class="m"><b>' + esc(p.n || 'без ника') + '</b><small>' + esc(suspicion(p).join('; ')) + '</small></div></div>';
+      }).join('') || '<p class="note">Никого. Подозрительными считаются рекорды в 5 раз выше «золота», больше 50 000 монет или слишком быстрый рост уровня.</p>') +
+      '<h2>📜 Журнал моих действий</h2>' + ((ls('adm_log') || []).slice(0, 30).map(function (l) { return '<div class="row"><div class="m"><b>' + esc(l.x) + '</b><small>' + new Date(l.t).toLocaleString('ru-RU') + '</small></div></div>'; }).join('') || '<p class="note">Пока пусто.</p>') +
+      ((ls('adm_log') || []).length ? '<button class="sec" data-act="logclear" style="width:100%">Очистить журнал</button>' : '') +
       '<h2>🧹 Пустые профили</h2><div class="row" style="display:block"><p class="note" style="margin-top:0">Найдено: ' + emptyProfiles().length + '. Это профили без ника (Player-…), без партий и рекордов — двойники, которые появлялись при первом запуске игры до версии 4.4.</p>' +
       '<button class="amber" data-act="clean" style="width:100%"' + (emptyProfiles().length ? '' : ' disabled') + '>Удалить пустые профили</button></div>';
   } else {
@@ -350,9 +356,13 @@ function renderPlayers() {
     if (flt === 'google' && p.ty !== 'google') return false;
     if (flt === 'ban' && !(p.ban || p.ipBan)) return false;
     if (flt === 'badge' && !(p.b && Object.keys(p.b).length)) return false;
+    if (flt === 'sus' && !suspicion(p).length) return false;
     return !ql || String(p.n).toLowerCase().indexOf(ql) >= 0 || p.u.toLowerCase().indexOf(ql) >= 0 || p.ip.indexOf(ql) >= 0;
   });
-  $('#plist').innerHTML = '<p class="note">Найдено: ' + list.length + (list.length > 200 ? ', показаны первые 200' : '') + '</p>' + list.slice(0, 200).map(playerRow).join('');
+  var key = function (p) { var pr = p.pr || {}; return srt === 'lv' ? +pr.lv || 0 : srt === 'co' ? +pr.co || 0 : srt === 'pl' ? +pr.pl || 0 : srt === 'new' ? Date.parse(String(pr.since || '').split('.').reverse().join('-')) || 0 : p.s || 0; };
+  list = list.slice().sort(function (a, b) { return (b.on - a.on) * (srt === 'seen' ? 1 : 0) || key(b) - key(a); });
+  $('#plist').innerHTML = '<div class="filters">' + SORTS.map(function (q) { return '<button class="' + (q[0] === srt ? 'on' : '') + '" data-srt="' + q[0] + '">↓ ' + q[1] + '</button>'; }).join('') + '</div>' +
+    '<p class="note">Найдено: ' + list.length + (list.length > 200 ? ', показаны первые 200' : '') + '</p>' + list.slice(0, 200).map(playerRow).join('');
 }
 function openPlayer(uid) {
   openUid = uid;
@@ -368,6 +378,9 @@ function openPlayer(uid) {
       return '<button class="' + (on ? '' : 'sec') + '" data-act="badge" data-k="' + k + '" data-on="' + (on ? 1 : 0) + '">' + BADGES[k][0] + ' ' + BADGES[k][1] + (on ? ' ✓' : '') + '</button>';
     }).join('') + '</div>' +
     '<h2>Монеты</h2><div class="row" style="display:block"><div class="note" style="margin-bottom:6px">Баланс у игрока: ' + (pr.co != null ? esc(pr.co) : 'неизвестен') + '. Начислится при следующем заходе или в течение минуты, если игра открыта.</div>' +
+    (suspicion(p).length ? '<p class="note" style="color:#fbbf24">⚠️ Подозрительно: ' + esc(suspicion(p).join('; ')) + '</p>' : '') +
+    '<div class="grid2" style="margin:0 0 8px"><input id="gset" type="number" placeholder="Сделать ровно" value="' + esc(pr.co != null ? pr.co : '') + '"><button class="sec" data-act="setcoins">🎯 Установить баланс</button></div>' +
+    '<button class="amber" data-act="resetprog" style="width:100%;margin-bottom:8px">🧹 Обнулить монеты и опыт</button>' +
     '<div class="grid2" style="margin:0 0 8px"><input id="gc" type="number" placeholder="Сколько (минус — списать)" value="100"><input id="gm" placeholder="Сообщение"></div><button data-act="gift" style="width:100%">💰 Начислить</button></div>' +
     '<h2>Сообщение и управление</h2><div class="row" style="display:block">' +
     '<input id="ms" placeholder="Текст сообщения или предупреждения" style="margin-bottom:8px"><div class="acts" style="margin:0 0 8px"><button data-act="msg">📩 Написать в чат</button><button class="amber" data-act="warn">⚠️ Предупредить</button></div>' +
@@ -394,6 +407,18 @@ function banHtml(p) {
   return '<h2>🚫 Бан</h2><div class="row" style="display:block"><div class="grid2" style="margin:0 0 8px"><select id="bdur"><option value="1">на 1 час</option><option value="24">на сутки</option><option value="168">на неделю</option><option value="720">на месяц</option><option value="0" selected>навсегда</option></select>' +
     '<input id="bwhy" placeholder="Причина (увидит игрок)"></div><button class="red" data-act="ban" style="width:100%">Забанить</button></div>';
 }
+function suspicion(p) {
+  var pr = p.pr || {}, why = [];
+  if (+pr.co > 50000) why.push('монет ' + pr.co);
+  if (+pr.lv > 60) why.push('уровень ' + pr.lv);
+  if (+pr.lv > 15 && +pr.pl < 10) why.push('уровень ' + pr.lv + ' за ' + (pr.pl || 0) + ' партий');
+  Object.keys((D && D.lb) || {}).forEach(function (k) {
+    if (k.charAt(0) === '_') return; var g = k.slice(0, k.lastIndexOf('_')), th = MEDALS[g], r = (D.lb[k] || {})[p.u];
+    if (r && th && +r.s > th[2] * 5) why.push(g + ': ' + r.s + ' (золото ' + th[2] + ')');
+  });
+  return why;
+}
+function logAct(t) { var L = ls('adm_log') || []; L.unshift({ t: Date.now(), x: t }); ls('adm_log', L.slice(0, 200)); }
 function recordsHtml(uid) {
   var rows = [];
   Object.keys((D && D.lb) || {}).forEach(function (k) { if (k.charAt(0) === '_') return; var r = (D.lb[k] || {})[uid]; if (r) rows.push({ k: k, s: +r.s || 0, t: r.t }); });
@@ -418,6 +443,7 @@ $('#view').addEventListener('input', function (e) { if (e.target.id === 'q') { q
 $('#modal').addEventListener('click', function (e) { if (e.target.id === 'modal') closeModal(); });
 document.addEventListener('click', function (e) {
   var f = e.target.closest('[data-flt]'); if (f) { flt = f.getAttribute('data-flt'); render(); return; }
+  var so = e.target.closest('[data-srt]'); if (so) { srt = so.getAttribute('data-srt'); renderPlayers(); return; }
   var row = e.target.closest('[data-uid]'); if (row && !e.target.closest('[data-act]')) { openPlayer(row.getAttribute('data-uid')); return; }
   var ch = e.target.closest('[data-chat]'); if (ch) { chatUid = ch.getAttribute('data-chat'); var cc = (D.support || []).filter(function (c) { return c.u === chatUid; })[0]; if (cc && cc.meta.ua) { cc.meta.ua = false; req('PATCH', '/support/' + chatUid + '/meta', { ua: false }).catch(function () { }); supNotify(); } render(); return; }
   var b = e.target.closest('[data-act]'); if (!b) return;
@@ -500,6 +526,23 @@ document.addEventListener('click', function (e) {
     var up = {}; E.forEach(function (p) { up['lb/_seen_0/' + p.u] = null; up['profiles/' + p.u] = null; up['ips/' + p.u] = null; });
     act(req('PATCH', '/', up), 'Удалено профилей: ' + E.length);
   }
+  else if (a === 'setcoins') {
+    var want = parseInt($('#gset').value, 10), pr3 = (p && p.pr) || {};
+    if (isNaN(want) || want < 0) { toast('Укажи число от 0'); return; }
+    if (pr3.co == null) { toast('Баланс игрока неизвестен — он ещё не заходил в новую версию'); return; }
+    var delta = want - (+pr3.co); if (!delta) { toast('Баланс уже такой'); return; }
+    act(req('POST', '/gifts/' + openUid, { c: delta, m: 'Баланс исправлен администрацией', t: { '.sv': 'timestamp' } }), 'Баланс станет ' + want + ' (' + (delta > 0 ? '+' : '') + delta + ')');
+  }
+  else if (a === 'resetprog') {
+    if (Date.now() - (window.rsAsk || 0) > 4000) { window.rsAsk = Date.now(); toast('Нажми ещё раз: у игрока обнулятся монеты и опыт'); return; }
+    act(req('POST', '/gifts/' + openUid, { c: 0, rs: 1, w: 1, m: 'Прогресс обнулён за нарушение правил', t: { '.sv': 'timestamp' } }), 'Монеты и опыт обнулятся при заходе игрока');
+  }
+  else if (a === 'closeall') {
+    var up3 = {}; (D.rooms || []).forEach(function (r) { up3['rooms/' + r.code] = null; });
+    if (!Object.keys(up3).length) { toast('Комнат нет'); return; }
+    act(req('PATCH', '/', up3), 'Закрыто комнат: ' + Object.keys(up3).length);
+  }
+  else if (a === 'logclear') { ls('adm_log', []); render(); }
   else if (a === 'chat-back') { chatUid = null; render(); }
   else if (a === 'chat-q') { $('#cr').value = id; $('#cr').focus(); }
   else if (a === 'chat-send') {
