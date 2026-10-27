@@ -11,6 +11,8 @@ window.GAMES.durak = {
     var discard, bubble, bubbleT, SPR = {};
     // режимы: 0 — с компьютером; 1 — вдвоём на одном телефоне (экран «передай телефон», hands[0] всегда у того, кто держит телефон);
     // 2 — онлайн: хост тасует колоду и присылает её, ходы приходят сообщениями вместо ходов бота
+    // перерисовка только по необходимости: в покое показываем сохранённый кадр
+    var dirty = 30, frameCv = null;
     var viewer = 0, cover = false, netQ = [], rdyT = 0;
     var deck, hands, trump, trumpCard, att, table, phase, takeMode, botT, msg, msgT, over, sel;
     function red(c) { return c.s >= 2; }
@@ -130,11 +132,12 @@ window.GAMES.durak = {
     function targets() {
       var T = [], i;
       for (i = 0; i < deck.length; i++) {
+        if (deck[i] !== trumpCard && i < deck.length - 3) continue; // рисуем только верх колоды и козырь — остальные карты не видны
         var dp = deckPos();
         if (deck[i] === trumpCard) T.push([deck[i], { x: dp.x + CH() * 0.2, y: dp.y + (CH() - CW()) / 2, w: dp.w, h: dp.h, r: Math.PI / 2 }, 1, 0]);
         else T.push([deck[i], { x: dp.x - i * 0.25, y: dp.y - i * 0.35, w: dp.w, h: dp.h, r: 0 }, 0, 1]);
       }
-      discard.forEach(function (cd, k) { T.push([cd, discardPos(k), 0, 2]); });
+      discard.forEach(function (cd, k) { if (k >= discard.length - 4) T.push([cd, discardPos(k), 0, 2]); }); // нижние карты стопки не видны
       hands[1].forEach(function (cd, k) { T.push([cd, botPos(k, hands[1].length), over ? 1 : 0, 3]); });
       table.forEach(function (p, k) { T.push([p.a, tablePos(k, false), 1, 4]); if (p.d) T.push([p.d, tablePos(k, true), 1, 5]); });
       hands[0].forEach(function (cd, k) { T.push([cd, handPos(k, hands[0].length), cover ? 0 : 1, 6]); });
@@ -269,7 +272,9 @@ window.GAMES.durak = {
       netMsg: function (d) { netQ.push(d); },
       resize: function () { }, idle: function () { }, key: function () { },
       input: function (type, d) {
-        if (type !== 'tap' || phase === 'over' || phase === 'done' || phase === 'sync') return;
+        // нажатие засчитываем сразу при касании: «тап» требовал быстрого касания и на тормозящем экране терялся
+        dirty = 20;
+        if (type !== 'down' || phase === 'over' || phase === 'done' || phase === 'sync') return;
         if (cover) { cover = false; api.sound('click'); return; }
         var b = buttons();
         for (var q = 0; q < b.length; q++) if (d.x > b[q].x && d.x < b[q].x + b[q].w && d.y > b[q].y && d.y < b[q].y + 46) {
@@ -283,11 +288,14 @@ window.GAMES.durak = {
       },
       update: function (dt) {
         if (msgT > 0) msgT -= dt; if (bubbleT > 0) bubbleT -= dt;
+        if (msgT > 0 || bubbleT > 0 || phase === 'bot' || phase === 'botdef' || phase === 'sync' || phase === 'over') dirty = Math.max(dirty, 2);
+        if (dirty > 0) dirty--;
         // карты летят к своим местам
         targets().forEach(function (T) {
           var cd = T[0], g = T[1];
           if (!cd.p) { var dp = deckPos(); cd.p = { x: dp.x, y: dp.y, r: 0, w: g.w, h: g.h }; }
           var k = Math.min(1, dt * 9);
+          if (Math.abs(g.x - cd.p.x) + Math.abs(g.y - cd.p.y) + Math.abs(g.r - cd.p.r) * 50 + Math.abs((T[2] ? 1 : 0) - cd.flip) * 50 > 0.4) dirty = Math.max(dirty, 2);
           cd.p.x += (g.x - cd.p.x) * k; cd.p.y += (g.y - cd.p.y) * k; cd.p.r += (g.r - cd.p.r) * k; cd.p.w += (g.w - cd.p.w) * k; cd.p.h += (g.h - cd.p.h) * k;
           cd.flip += ((T[2] ? 1 : 0) - cd.flip) * Math.min(1, dt * 10);
         });
@@ -304,6 +312,15 @@ window.GAMES.durak = {
         if (phase !== 'over' && phase !== 'done') checkEnd();
       },
       draw: function (c) {
+        var cvs = c.canvas;
+        if (!dirty && frameCv && frameCv.width === cvs.width && frameCv.height === cvs.height) { c.save(); c.setTransform(1, 0, 0, 1, 0, 0); c.drawImage(frameCv, 0, 0); c.restore(); return; }
+        drawFull(c);
+        if (!frameCv || frameCv.width !== cvs.width || frameCv.height !== cvs.height) { frameCv = document.createElement('canvas'); frameCv.width = cvs.width; frameCv.height = cvs.height; }
+        var fx = frameCv.getContext('2d'); fx.clearRect(0, 0, frameCv.width, frameCv.height); fx.drawImage(cvs, 0, 0);
+      },
+      resize: function () { dirty = 30; }
+    };
+    function drawFull(c) {
         var W = api.W, H = api.H;
         c.drawImage(felt(W, H).cv, 0, 0, W, H);
         // соперник
@@ -331,10 +348,10 @@ window.GAMES.durak = {
           var sc = Math.abs(cd.flip * 2 - 1), up = cd.flip > 0.5;
           var lift = e[3] === 6 && playable(cd) ? -10 : 0, dim = e[3] === 6 && (phase === 'attack' || phase === 'defend') && !playable(cd);
           c.save(); c.translate(p.x + p.w / 2, p.y + p.h / 2 + lift); c.rotate(p.r); c.scale(Math.max(0.04, sc), 1);
-          c.shadowColor = 'rgba(0,0,0,.35)'; c.shadowBlur = 6; c.shadowOffsetY = 3;
+          // тень — простой полупрозрачный прямоугольник: размытая тень на каждой карте тормозила телефоны
+          c.fillStyle = 'rgba(0,0,0,.28)'; rr(c, -p.w / 2 + 2, -p.h / 2 + 3, p.w, p.h, 6); c.fill();
           var img = up ? face(cd, Math.round(CW()), Math.round(CH())) : back(Math.round(CW()), Math.round(CH()));
           c.drawImage(img.cv, -p.w / 2, -p.h / 2, p.w, p.h);
-          c.shadowColor = 'transparent';
           if (lift) { c.strokeStyle = '#facc15'; c.lineWidth = 2.5; rr(c, -p.w / 2, -p.h / 2, p.w, p.h, 6); c.stroke(); }
           if (dim) { c.fillStyle = 'rgba(15,23,42,.28)'; rr(c, -p.w / 2, -p.h / 2, p.w, p.h, 6); c.fill(); }
           c.restore();
@@ -357,7 +374,7 @@ window.GAMES.durak = {
         c.fillStyle = '#fef08a'; c.font = '800 15px system-ui'; c.textAlign = 'center'; c.fillText(who, W / 2, hy);
         buttons().forEach(function (b) {
           var g = c.createLinearGradient(0, b.y, 0, b.y + 46); g.addColorStop(0, b.c[0]); g.addColorStop(1, b.c[1]);
-          c.shadowColor = 'rgba(0,0,0,.4)'; c.shadowBlur = 10; c.shadowOffsetY = 4;
+          c.fillStyle = 'rgba(0,0,0,.3)'; c.beginPath(); c.roundRect ? c.roundRect(b.x, b.y + 4, b.w, 46, 23) : c.rect(b.x, b.y + 4, b.w, 46); c.fill();
           c.fillStyle = g; c.beginPath(); c.roundRect ? c.roundRect(b.x, b.y, b.w, 46, 23) : c.rect(b.x, b.y, b.w, 46); c.fill();
           c.shadowColor = 'transparent'; c.fillStyle = 'rgba(255,255,255,.2)'; c.fillRect(b.x + 20, b.y + 4, b.w - 40, 2);
           c.fillStyle = '#fff'; c.font = '800 18px system-ui'; c.fillText(b.t, b.x + b.w / 2, b.y + 24);
@@ -375,6 +392,5 @@ window.GAMES.durak = {
           c.fillStyle = '#e7e5e4'; c.font = '700 14px system-ui'; c.fillText('Передай телефон и нажми, чтобы открыть карты', W / 2, H * 0.66 + 58);
         }
       }
-    };
   }
 };
