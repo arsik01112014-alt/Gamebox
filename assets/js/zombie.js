@@ -56,7 +56,7 @@ window.GAMES.zombie = {
           if (Math.hypot(P.x - z.x, P.y - z.y) < z.r + 12 && hurtT <= 0) { P.hp--; hurtT = 1; api.sound('hit'); api.vibrate(60); api.fx.shake && api.fx.shake(8); if (P.hp <= 0) { api.gameOver(); } }
         });
         for (var i = zs.length - 1; i >= 0; i--) if (zs[i].hp <= 0) {
-          var z = zs[i]; kills++; api.addScore(z.big ? 5 : z.fast ? 2 : 1); boom(z.x, z.y, '#65a30d', 12); api.sound('pop');
+          var z = zs[i]; kills++; api.addScore(z.big ? 5 : z.fast ? 2 : 1); boom(z.x, z.y, '#65a30d', 12); api.sound('break');
           if (Math.random() < (z.big ? 0.6 : 0.06)) items.push({ x: z.x, y: z.y, k: Math.random() < 0.5 ? 'hp' : 'pw', l: 9 });
           zs.splice(i, 1);
         }

@@ -7,7 +7,7 @@
     'stack', 'jumper', 'memory', 'mole', 'simon',
     'asteroids', 'crossy', 'fruit', 'knife', 'tiles', 'bubbles', 'connect4', 'reversi',
     'puzzle15', 'blocks', 'colorjump', 'airhockey', 'racing', 'archery', 'basket', 'maze', 'solitaire', 'yahtzee',
-    'sokoban', 'watersort', 'mahjong', 'gomoku', 'dots', 'bowling', 'minigolf', 'pinball', 'penalty', 'towerdef', 'numbers', 'reflex', 'dodge', 'lights', 'flood', 'hangman', 'nim', 'blackjack', 'guess', 'bulls', 'wordle', 'lines', 'blockblast', 'arrows', 'catcher', 'aim', 'clicker', 'dash', 'bricks', 'durak', 'flow', 'twocars', 'zigzag', 'mill', 'ugolki', 'rps', 'duel', 'tron', 'hex', 'dicepoker', 'mathduel', 'wordduel', 'kalah', 'quoridor', 'pentago', 'helix', 'swing', 'zombie', 'nonogram', 'pipes', 'hanoi', 'anagram', 'quiz'].filter(function (id) { return GAMES[id]; });
+    'sokoban', 'watersort', 'mahjong', 'gomoku', 'dots', 'bowling', 'minigolf', 'pinball', 'penalty', 'towerdef', 'numbers', 'reflex', 'dodge', 'lights', 'flood', 'hangman', 'nim', 'blackjack', 'guess', 'bulls', 'wordle', 'lines', 'blockblast', 'arrows', 'catcher', 'aim', 'clicker', 'dash', 'bricks', 'durak', 'flow', 'twocars', 'zigzag', 'mill', 'ugolki', 'rps', 'duel', 'tron', 'hex', 'dicepoker', 'mathduel', 'wordduel', 'kalah', 'quoridor', 'pentago', 'helix', 'swing', 'zombie', 'nonogram', 'pipes', 'hanoi', 'anagram', 'quiz', 'ultimate', 'go', 'minesduel', 'ninja', 'zuma', 'heli'].filter(function (id) { return GAMES[id]; });
   var $ = function (s) { return document.querySelector(s); };
 
   /* ---------- хранилище ---------- */
@@ -1382,7 +1382,7 @@
       '<button class="btn" data-set="close">' + t('set.done') + '</button>' +
       '<div class="ver">' + t('set.version') + ' ' + APP_NAME + '</div>';
   }
-  var APP_NAME = '5.3', APP_CODE = 53, updInfo = null, updBarHidden = false;
+  var APP_NAME = '5.4', APP_CODE = 54, updInfo = null, updBarHidden = false;
   // обновление APK: в /app/latest лежит {code, name, notes, url}, админка публикует его кнопкой.
   // WebView приложения не умеет скачивать файлы сам, поэтому «Скачать» копирует ссылку для браузера
   function checkUpdate() {
