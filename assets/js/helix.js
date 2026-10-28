@@ -20,8 +20,8 @@ window.GAMES.helix = {
       return { y: i * GAP * 10 + 120, s: s, broke: 0 };
     }
     function R() { return Math.min(api.W * 0.42, 170); }
-    function segAt(L) { // какой сектор этажа сейчас под мячиком (мячик спереди, угол π/2)
-      var a = ((Math.PI / 2 - rot) % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2);
+    function segAt(L) { // какой сектор этажа сейчас под мячиком (мячик спереди, угол 0)
+      var a = ((-rot) % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2);
       return Math.floor(a / (Math.PI * 2 / SEG)) % SEG;
     }
     return {
@@ -46,7 +46,7 @@ window.GAMES.helix = {
           if (combo >= 3) { L.broke = 2; L.bt = 0; combo = 0; passed++; api.addScore(3); api.sound('bonus'); api.fx.shake && api.fx.shake(6); api.vibrate(25); continue; }
           if (s === 2) { dead = true; api.sound('hit'); api.vibrate(80); return; }
           ny = L.y - 12; ball.vy = -540; ball.sq = 1; combo = 0; api.sound('jump');
-          splats.push({ lv: i, a: Math.PI / 2 - rot, life: 1.5 });
+          splats.push({ lv: i, a: -rot, life: 1.5 });
           break;
         }
         ball.y = ny; trail.push(ball.y); if (trail.length > 8) trail.shift();
@@ -55,60 +55,68 @@ window.GAMES.helix = {
         levels.forEach(function (L) { if (L.broke === 2) L.bt += dt; });
       },
       draw: function (c) {
-        var W = api.W, H = api.H, cx = W / 2, r = R(), ry = r * 0.28, ri = r * 0.24;
+        var W = api.W, H = api.H, cx = W / 2, r = R(), ri = r * 0.22, T = 0.34, TH = 14, step = Math.PI * 2 / SEG, rb = (r + ri) / 2;
         var g = c.createLinearGradient(0, 0, 0, H); g.addColorStop(0, pal[2]); g.addColorStop(1, '#0b0a1f'); c.fillStyle = g; c.fillRect(0, 0, W, H);
-        // дальние огоньки
         for (var q = 0; q < 26; q++) { var px = (q * 137) % W, py = ((q * 251 - camY * (0.15 + (q % 3) * 0.08)) % H + H) % H; c.fillStyle = 'rgba(255,255,255,' + (0.1 + (q % 4) * 0.06) + ')'; c.beginPath(); c.arc(px, py, 1 + (q % 3) * 0.6, 0, 6.283); c.fill(); }
-        var step = Math.PI * 2 / SEG, vis = [];
-        levels.forEach(function (L, li) {
-          var y = L.y - camY + 30; if (y < -40 || y > H + 60 || L.broke === 1) return;
-          var fade = L.broke === 2 ? Math.max(0, 1 - L.bt * 2) : 1; if (fade > 0) vis.push([L, li, y, fade]);
-        });
-        // сектор одного типа подряд рисуется одним куском — без щелей между секторами
-        function runs(L, wantFront) {
-          var out = [], k0 = -1;
-          for (var k = 0; k <= SEG; k++) {
-            var kk = k % SEG, s2 = k < SEG ? L.s[kk] : 0, mid = kk * step + step / 2 + rot, fr = Math.sin(mid) > 0;
-            var ok = k < SEG && s2 && fr === wantFront;
-            if (ok && (k0 < 0 || L.s[k0] !== s2)) { if (k0 >= 0) out.push([k0, k - 1]); k0 = k; }
-            else if (!ok && k0 >= 0) { out.push([k0, k - 1]); k0 = -1; }
-          }
-          return out;
+        function sy(L) { return L.y - camY + 30; }
+        function P(a, rr, y) { return [cx + Math.sin(a) * rr, y + Math.cos(a) * rr * T]; }
+        function shade(hex, k) { return window.GBK.shade(hex, k); }
+        function pole(y0, y1) { // кусок столба между y0 и y1
+          if (y1 < y0) { var tt = y0; y0 = y1; y1 = tt; }
+          var pg = c.createLinearGradient(cx - ri, 0, cx + ri, 0); pg.addColorStop(0, '#64748b'); pg.addColorStop(0.35, '#f1f5f9'); pg.addColorStop(1, '#475569');
+          c.fillStyle = pg; c.fillRect(cx - ri, y0, ri * 2, y1 - y0);
         }
-        function ring(L, y, fade, front) {
-          var off = L.broke === 2 ? L.bt * 160 : 0; c.globalAlpha = fade;
-          runs(L, front).forEach(function (rn) {
-            var s2 = L.s[rn[0]], a0 = rn[0] * step + rot - 0.004, a1 = (rn[1] + 1) * step + rot + 0.004, mid = (a0 + a1) / 2, ox = Math.cos(mid) * off, oy = Math.sin(mid) * off * 0.3;
-            var top = s2 === 2 ? '#fb7185' : pal[0], side = s2 === 2 ? '#9f1239' : pal[1];
-            if (front) { // боковая стенка этажа
-              c.beginPath(); c.ellipse(cx + ox, y + oy, r, ry, 0, a0, a1); c.ellipse(cx + ox, y + oy + 12, r, ry, 0, a1, a0, true); c.closePath();
-              var sg = c.createLinearGradient(cx - r, 0, cx + r, 0); sg.addColorStop(0, side); sg.addColorStop(0.5, s2 === 2 ? '#e11d48' : pal[1]); sg.addColorStop(1, side); c.fillStyle = sg; c.fill();
+        function arcPts(a0, a1, rr, y, out) { var n = 6; for (var k = 0; k <= n; k++) { var p2 = P(a0 + (a1 - a0) * k / n, rr, y); out.push(p2); } return out; }
+        function poly(pts, col) { c.beginPath(); c.moveTo(pts[0][0], pts[0][1]); for (var k = 1; k < pts.length; k++) c.lineTo(pts[k][0], pts[k][1]); c.closePath(); c.fillStyle = col; c.fill(); }
+        function level(L, li, half) { // half: -1 задние сектора, 1 передние
+          var y = sy(L), off = 0, drop = 0, alpha = 1;
+          if (L.broke === 2) { off = L.bt * 220; drop = L.bt * L.bt * 500; alpha = Math.max(0, 1 - L.bt * 1.6); if (alpha <= 0) return; }
+          c.globalAlpha = alpha;
+          for (var k = 0; k < SEG; k++) {
+            var sv = L.s[k]; if (!sv) continue;
+            var a0 = k * step + rot - 0.012, a1 = a0 + step + 0.024, am = (a0 + a1) / 2, front = Math.cos(am) > 0;
+            if ((half > 0) !== front) continue;
+            var ox = Math.sin(am) * off, oy = drop;
+            c.save(); c.translate(ox, oy);
+            var base = sv === 2 ? '#f43f5e' : pal[0], light = 0.08 * Math.cos(am - 0.6);
+            if (front) { // наружная стенка и торцы у щелей
+              var wall = arcPts(a0, a1, r, y, []), wall2 = arcPts(a1, a0, r, y + TH, []);
+              poly(wall.concat(wall2), shade(sv === 2 ? '#be123c' : pal[1], -0.05 + light));
+              [[a0, L.s[(k + SEG - 1) % SEG] !== sv], [a1, L.s[(k + 1) % SEG] !== sv]].forEach(function (e) {
+                if (!e[1] || Math.cos(e[0]) < 0) return; var o1 = P(e[0], r, y), i1 = P(e[0], ri, y);
+                poly([o1, i1, [i1[0], i1[1] + TH], [o1[0], o1[1] + TH]], shade(sv === 2 ? '#9f1239' : pal[1], -0.25));
+              });
             }
-            c.beginPath(); c.ellipse(cx + ox, y + oy, r, ry, 0, a0, a1); c.ellipse(cx + ox, y + oy, ri, ri * 0.28, 0, a1, a0, true); c.closePath();
-            c.fillStyle = front ? top : side; c.fill();
-            if (front) { c.strokeStyle = 'rgba(255,255,255,.35)'; c.lineWidth = 1.5; c.beginPath(); c.ellipse(cx + ox, y + oy, r - 1, ry - 1, 0, a0, a1); c.stroke(); }
-            if (s2 === 2 && front) { c.fillStyle = 'rgba(255,255,255,' + (0.15 + 0.1 * Math.sin(t * 8)) + ')'; c.beginPath(); c.ellipse(cx + ox, y + oy, r * 0.8, ry * 0.8, 0, a0 + 0.05, a1 - 0.05); c.ellipse(cx + ox, y + oy, r * 0.6, ry * 0.6, 0, a1 - 0.05, a0 + 0.05, true); c.closePath(); c.fill(); }
-          });
+            var top = arcPts(a0, a1, r, y, []).concat(arcPts(a1, a0, ri, y, []));
+            poly(top, front ? shade(base, light) : shade(base, -0.14 + light));
+            if (front) { c.strokeStyle = 'rgba(255,255,255,.35)'; c.lineWidth = 1.2; c.beginPath(); var e1 = arcPts(a0, a1, r - 1, y, []); c.moveTo(e1[0][0], e1[0][1]); e1.forEach(function (pp) { c.lineTo(pp[0], pp[1]); }); c.stroke(); }
+            if (sv === 2) { c.fillStyle = 'rgba(255,255,255,' + (0.12 + 0.1 * Math.sin(t * 8)) + ')'; poly(arcPts(a0 + 0.06, a1 - 0.06, r * 0.85, y, []).concat(arcPts(a1 - 0.06, a0 + 0.06, r * 0.6, y, [])), c.fillStyle); }
+            c.restore();
+          }
+          if (half > 0) splats.forEach(function (sp) { if (sp.lv !== li || L.broke) return; var a = sp.a + rot; if (Math.cos(a) < 0.2) return; var pp = P(a, rb, y); c.fillStyle = 'rgba(251,191,36,' + Math.min(0.85, sp.life) + ')'; c.beginPath(); c.ellipse(pp[0], pp[1], 13 * Math.cos(a), 4.5, 0, 0, 6.283); c.fill(); });
           c.globalAlpha = 1;
         }
-        vis.forEach(function (v2) { ring(v2[0], v2[2], v2[3], false); }); // задние половины — за столбом
-        // столб с кольцами-полосками
-        var pg = c.createLinearGradient(cx - ri, 0, cx + ri, 0); pg.addColorStop(0, '#94a3b8'); pg.addColorStop(0.35, '#f8fafc'); pg.addColorStop(1, '#64748b');
-        c.fillStyle = pg; c.fillRect(cx - ri, 0, ri * 2, H);
-        c.fillStyle = 'rgba(15,23,42,.12)'; for (var sy2 = -((camY * 1) % 46); sy2 < H; sy2 += 46) c.fillRect(cx - ri, sy2, ri * 2, 4);
-        vis.forEach(function (v2) {
-          ring(v2[0], v2[2], v2[3], true);
-          splats.forEach(function (sp) { if (sp.lv !== v2[1]) return; var a = sp.a + rot; if (Math.sin(a) < 0) return; c.fillStyle = 'rgba(251,191,36,' + Math.min(0.8, sp.life) + ')'; c.beginPath(); c.ellipse(cx + Math.cos(a) * r * 0.62, v2[2] + Math.sin(a) * ry * 0.62, 13, 4.5, 0, 0, 6.283); c.fill(); });
-        });
-        // след мячика
-        trail.forEach(function (p2, i) { c.fillStyle = (combo >= 3 ? 'rgba(249,115,22,' : 'rgba(251,191,36,') + (i / trail.length * 0.35) + ')'; c.beginPath(); c.arc(cx, p2 - camY + 30 - 12 + ry * 0.62, 4 + i / trail.length * 7, 0, 6.283); c.fill(); });
-        // мячик спереди
-        var by = ball.y - camY + 30 - 12, bx = cx, sq = Math.max(0, ball.sq);
-        var bz = ry * 0.62; // спереди кольца
-        c.fillStyle = 'rgba(0,0,0,.25)'; c.beginPath(); c.ellipse(bx, by + bz + 14, 12, 4, 0, 0, 6.283); c.fill();
-        var bg2 = c.createRadialGradient(bx - 4, by + bz - 5, 2, bx, by + bz, 13); bg2.addColorStop(0, '#fef3c7'); bg2.addColorStop(1, combo >= 3 ? '#f97316' : '#f59e0b');
-        c.fillStyle = bg2; c.beginPath(); c.ellipse(bx, by + bz, 12 * (1 + sq * 0.25), 12 * (1 - sq * 0.25), 0, 0, 6.283); c.fill();
-        if (combo >= 3) { c.strokeStyle = 'rgba(249,115,22,.6)'; c.lineWidth = 3; c.beginPath(); c.arc(bx, by + bz, 18 + Math.sin(t * 20) * 2, 0, 6.283); c.stroke(); }
+        var vis = []; levels.forEach(function (L, li) { var y = sy(L); if (y > -60 && y < H + 80 && L.broke !== 1) vis.push(li); });
+        pole(0, H); // фон столба
+        var by = ball.y - camY + 30 - 12, ballDrawn = false;
+        function drawBall() {
+          ballDrawn = true; var bpos = P(0, rb, by), sq = Math.max(0, ball.sq);
+          // тень на ближайшем этаже снизу
+          for (var k = 0; k < levels.length; k++) { var L = levels[k]; if (L.broke || L.y < ball.y + 12) continue; var ly = sy(L), d = ly - (by + 12); if (L.s[segAt(L)]) { var sp2 = P(0, rb, ly); c.fillStyle = 'rgba(0,0,0,' + Math.max(0.08, 0.35 - d / 400) + ')'; c.beginPath(); c.ellipse(sp2[0], sp2[1], 12 + d * 0.02, 4.5, 0, 0, 6.283); c.fill(); } break; }
+          trail.forEach(function (p2, i) { var tp = P(0, rb, p2 - camY + 30 - 12); c.fillStyle = (combo >= 3 ? 'rgba(249,115,22,' : 'rgba(251,191,36,') + (i / trail.length * 0.35) + ')'; c.beginPath(); c.arc(tp[0], tp[1], 3 + i / trail.length * 7, 0, 6.283); c.fill(); });
+          var bg2 = c.createRadialGradient(bpos[0] - 4, bpos[1] - 5, 2, bpos[0], bpos[1], 13); bg2.addColorStop(0, '#fff7d6'); bg2.addColorStop(1, combo >= 3 ? '#f97316' : '#f59e0b');
+          c.fillStyle = bg2; c.beginPath(); c.ellipse(bpos[0], bpos[1] + sq * 3, 12 * (1 + sq * 0.25), 12 * (1 - sq * 0.25), 0, 0, 6.283); c.fill();
+          if (combo >= 3) { c.strokeStyle = 'rgba(249,115,22,.6)'; c.lineWidth = 3; c.beginPath(); c.arc(bpos[0], bpos[1], 18 + Math.sin(t * 20) * 2, 0, 6.283); c.stroke(); }
+        }
+        // снизу вверх: нижние этажи раньше, верхние перекрывают их; мячик — между этажами
+        for (var vi = vis.length - 1; vi >= 0; vi--) {
+          var li = vis[vi], L = levels[li], y = sy(L);
+          if (!ballDrawn && y < by + 12) drawBall();
+          level(L, li, -1);
+          var up = vi > 0 ? sy(levels[vis[vi - 1]]) : -10; pole(up, y); // столб над этажом закрывает его заднюю половину
+          level(L, li, 1);
+        }
+        if (!ballDrawn) drawBall();
         if (dead) { c.fillStyle = 'rgba(244,63,94,' + Math.min(0.4, deadT) + ')'; c.fillRect(0, 0, W, H); }
         c.fillStyle = '#fff'; c.font = '800 15px system-ui'; c.textAlign = 'center'; c.fillText('Этажей: ' + passed + (combo >= 3 ? '  🔥 ПРОБОЙ!' : ''), W / 2, 30);
         for (var cb = 0; cb < 3; cb++) { c.fillStyle = cb < combo ? '#f97316' : 'rgba(255,255,255,.2)'; window.GBK.rr(c, W / 2 - 39 + cb * 27, 42, 24, 6, 3); c.fill(); }
