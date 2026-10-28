@@ -1,0 +1,127 @@
+/* v5.2: интерфейс и навигация. «Витрина» (shop), «Рабочий стол» (desk), «Боковое меню» (side). «Классика» — без изменений */
+:root { --nv-bg:rgba(16,14,38,.94); --nv-fg:#fff; --nv-mut:rgba(255,255,255,.55); --nv-card:rgba(255,255,255,.07); --nv-line:rgba(255,255,255,.1); --nv-acc:linear-gradient(135deg,#7c5cff,#ff5ea8); }
+html[data-skin=minimal], html[data-skin=liquid] { --nv-bg:rgba(255,255,255,.94); --nv-fg:#1c1c1e; --nv-mut:rgba(0,0,0,.45); --nv-card:rgba(0,0,0,.05); --nv-line:rgba(0,0,0,.08); }
+.nv-off { display:none !important; }
+#nav { display:none; }
+html[data-layout=classic] #home, html[data-layout=classic] #onl, html[data-layout=classic] #nav { display:none !important; }
+
+/* место под нижнюю панель */
+html[data-layout=shop] #menu, html[data-layout=desk] #menu { padding-bottom:calc(96px + env(safe-area-inset-bottom)); }
+html[data-layout=shop] #menu .menu-foot { margin-bottom:6px; }
+#menu[data-view=online] #tabs, #menu[data-view=online] .hero { display:none !important; }
+
+/* ---- общие ряды ---- */
+#home { display:block; }
+.nrow-h { display:flex; align-items:baseline; justify-content:space-between; margin:20px 2px 10px; }
+.nrow-h h3 { font-size:19px; font-weight:900; letter-spacing:-.2px; }
+.nrow-h button { border:0; background:none; color:#a78bfa; font-weight:800; font-size:14px; padding:4px 0 4px 10px; }
+.nrow { display:flex; gap:12px; overflow-x:auto; margin:0 -16px; padding:2px 16px 6px; scrollbar-width:none; touch-action:pan-x pan-y; scroll-snap-type:x proximity; }
+.nrow::-webkit-scrollbar { display:none; }
+.nt { flex:none; width:84px; border:0; background:none; color:inherit; text-align:left; padding:0; scroll-snap-align:start; }
+.nt:active { transform:scale(.94); }
+.ni { position:relative; display:grid; place-items:center; border-radius:22%; background:linear-gradient(150deg,var(--c1),var(--c2)); box-shadow:0 10px 18px -10px var(--c1), inset 0 1px 0 rgba(255,255,255,.3); }
+.ni svg { width:80%; height:80%; display:block; }
+.ni em { position:absolute; right:-4px; bottom:-4px; font-style:normal; font-size:16px; }
+.nt .ni { width:84px; height:84px; }
+.nt b { display:block; font-size:12.5px; font-weight:800; margin-top:7px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.nt small { display:block; font-size:11px; color:var(--nv-mut); margin-top:1px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+
+/* большая карточка «Игра дня» */
+.nhero { position:relative; display:block; width:100%; height:176px; margin-top:16px; border:0; border-radius:26px; padding:20px; overflow:hidden; text-align:left; color:#fff;
+  background:radial-gradient(120% 90% at 100% 0%, rgba(255,255,255,.3), transparent 55%), linear-gradient(135deg,var(--c1),var(--c2)); box-shadow:0 20px 36px -20px var(--c1); }
+.nhero small { font-size:11px; font-weight:800; letter-spacing:2px; text-transform:uppercase; opacity:.85; }
+.nhero b { display:block; font-size:26px; font-weight:900; margin:6px 0 4px; max-width:60%; }
+.nhero p { font-size:13px; opacity:.9; max-width:55%; line-height:1.3; }
+.nhero .ngo { position:absolute; left:20px; bottom:18px; background:#fff; color:#4c1d95; font-weight:900; font-size:14px; padding:9px 22px; border-radius:999px; }
+.nhero .ni { position:absolute; right:16px; bottom:16px; width:124px; height:124px; transform:rotate(8deg); background:rgba(255,255,255,.18); box-shadow:0 14px 26px rgba(0,0,0,.3); }
+.nhero:active { transform:scale(.98); }
+
+/* ---- нижняя панель (Витрина) и док (Рабочий стол) ---- */
+html[data-layout=shop] #nav, html[data-layout=desk] #nav { position:fixed; z-index:50; left:0; right:0; bottom:0; display:flex; justify-content:space-around; align-items:flex-start;
+  padding:8px 6px calc(10px + env(safe-area-inset-bottom)); background:var(--nv-bg); border-top:1px solid var(--nv-line); -webkit-backdrop-filter:blur(18px); backdrop-filter:blur(18px); }
+#nav button { border:0; background:none; color:var(--nv-mut); display:flex; flex-direction:column; align-items:center; gap:3px; font-size:11px; font-weight:800; padding:4px 2px; min-width:58px; }
+#nav button span { font-size:22px; line-height:1.15; filter:grayscale(.6); opacity:.75; transition:transform .15s; }
+#nav button.on { color:var(--nv-fg); }
+#nav button.on span { filter:drop-shadow(0 0 8px rgba(255,94,168,.8)); opacity:1; transform:translateY(-2px); }
+#nav button:active span { transform:scale(.85); }
+
+html[data-layout=desk] #nav { left:12px; right:12px; bottom:calc(12px + env(safe-area-inset-bottom)); padding:10px 6px; border-radius:30px; border:1px solid var(--nv-line); box-shadow:0 16px 36px rgba(0,0,0,.4); }
+html[data-layout=desk] #nav button span { width:50px; height:50px; border-radius:17px; display:grid; place-items:center; background:var(--nv-card); font-size:24px; }
+html[data-layout=desk] #nav button.on span { background:var(--nv-acc); filter:none; }
+html[data-layout=desk] #menu { padding-bottom:calc(120px + env(safe-area-inset-bottom)); }
+
+/* ---- Рабочий стол: сетка иконок и папки ---- */
+.nsec { font-size:11.5px; font-weight:800; letter-spacing:2px; text-transform:uppercase; color:var(--nv-mut); margin:20px 4px 12px; }
+.ngrid { display:grid; grid-template-columns:repeat(4,1fr); gap:16px 8px; }
+.ngrid .nt { width:auto; text-align:center; }
+.ngrid .nt .ni { width:64px; height:64px; margin:0 auto; }
+.ngrid .nt b { font-size:11.5px; font-weight:700; margin-top:6px; }
+.nf { border:0; background:none; color:inherit; padding:0; text-align:center; }
+.nf:active { transform:scale(.94); }
+.nfi { width:64px; height:64px; margin:0 auto; border-radius:22%; background:var(--nv-card); border:1px solid var(--nv-line); display:grid; grid-template-columns:1fr 1fr; gap:4px; padding:7px; }
+.nfi i { display:grid; place-items:center; border-radius:28%; background:linear-gradient(150deg,var(--c1),var(--c2)); }
+.nfi i svg { width:82%; height:82%; }
+.nf b { display:block; font-size:11.5px; font-weight:700; margin-top:6px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+/* в разделе «Игры» карточки становятся иконками */
+html[data-layout=desk] #menu[data-view=games] .cards, html[data-layout=desk] #menu[data-view=online] .cards { grid-template-columns:repeat(4,minmax(0,1fr)) !important; gap:16px 8px; }
+html[data-layout=desk] #menu[data-view=games] .card, html[data-layout=desk] #menu[data-view=online] .card { min-height:0; padding:0; background:none !important; border:0 !important; box-shadow:none !important; overflow:visible; animation:none; }
+html[data-layout=desk] #menu[data-view=games] .card::before, html[data-layout=desk] #menu[data-view=games] .card::after,
+html[data-layout=desk] #menu[data-view=online] .card::before, html[data-layout=desk] #menu[data-view=online] .card::after { display:none; }
+html[data-layout=desk] #menu[data-view] .card { display:block !important; text-align:center; }
+html[data-layout=desk] #menu[data-view] .card .lbl { display:block !important; position:static !important; padding:0 !important; background:none !important; }
+html[data-layout=desk] #menu[data-view] .card .cart { display:block !important; position:relative; width:64px; height:64px; margin:0 auto; border-radius:22%; background:linear-gradient(150deg,var(--c1),var(--c2)); box-shadow:0 10px 18px -10px var(--c1); }
+html[data-layout=desk] #menu[data-view] .card .ic { position:absolute !important; inset:7px !important; width:auto !important; height:auto !important; animation:none !important; filter:none !important; transform:none !important; }
+html[data-layout=desk] #menu[data-view] .card .num, html[data-layout=desk] #menu[data-view] .card .desc, html[data-layout=desk] #menu[data-view] .card .meta,
+html[data-layout=desk] #menu[data-view] .card .fv, html[data-layout=desk] #menu[data-view] .card .shine { display:none !important; }
+html[data-layout=desk] #menu[data-view] .card .new { position:absolute; top:-6px; right:-8px; left:auto; font-size:9px; padding:2px 5px; z-index:2; }
+html[data-layout=desk] #menu[data-view] .card h2 { font-size:11.5px; font-weight:700; text-align:center; margin-top:6px; text-shadow:none; color:var(--nv-fg); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+html[data-layout=desk] #menu[data-view] .card .lockb { font-size:10px; position:static; display:block; text-align:center; margin-top:2px; }
+
+/* ---- Боковое меню ---- */
+html[data-layout=side] #nav { position:fixed; z-index:50; left:0; top:0; bottom:0; width:74px; display:flex; flex-direction:column; align-items:center; gap:6px;
+  padding:calc(16px + env(safe-area-inset-top)) 0 calc(14px + env(safe-area-inset-bottom)); background:var(--nv-bg); border-right:1px solid var(--nv-line); }
+html[data-layout=side] #nav button { width:60px; min-width:0; padding:9px 0; border-radius:17px; font-size:9.5px; }
+html[data-layout=side] #nav button.on { background:var(--nv-acc); color:#fff; }
+html[data-layout=side] #nav button.on span { filter:none; transform:none; }
+html[data-layout=side] #nav [data-nav=more] { margin-top:auto; }
+html[data-layout=side] #nav .nav-av { width:46px; height:46px; padding:0; border-radius:50%; overflow:hidden; margin-bottom:10px; background:var(--nv-acc); display:grid; place-items:center; font-size:24px; }
+html[data-layout=side] #nav .nav-av svg, html[data-layout=side] #nav .nav-av img { width:100%; height:100%; }
+html[data-layout=side] #menu { padding-left:88px; padding-right:12px; }
+html[data-layout=side] .top .logo { display:none; }
+html[data-layout=side] .nrow { margin:0 -12px 0 -14px; padding:2px 12px 6px 14px; }
+.ncont { width:100%; display:flex; align-items:center; gap:12px; margin-top:6px; padding:12px; border-radius:22px; border:1px solid var(--nv-line); background:var(--nv-card); color:inherit; text-align:left; }
+.ncont .ni { width:60px; height:60px; flex:none; }
+.ncont .nct { flex:1; min-width:0; }
+.ncont small { display:block; font-size:10.5px; font-weight:800; letter-spacing:1.5px; text-transform:uppercase; color:var(--nv-mut); }
+.ncont small + b + small { text-transform:none; letter-spacing:0; font-weight:700; font-size:12px; }
+.ncont b { display:block; font-size:18px; font-weight:900; margin:2px 0; }
+.ncont .ngo { width:46px; height:46px; border-radius:50%; background:#fff; color:#111; display:grid; place-items:center; font-size:18px; flex:none; }
+.ncont:active { transform:scale(.97); }
+.ns { position:relative; flex:none; width:136px; height:164px; border:0; border-radius:22px; padding:12px; overflow:hidden; text-align:left; color:#fff; display:flex; flex-direction:column; justify-content:flex-end;
+  background:radial-gradient(110% 80% at 100% 0%, rgba(255,255,255,.28), transparent 55%), linear-gradient(160deg,var(--c1),var(--c2)); box-shadow:0 14px 26px -16px var(--c1); scroll-snap-align:start; }
+.ns .ni { position:absolute; top:10px; right:8px; width:82px; height:82px; background:none; box-shadow:none; filter:drop-shadow(0 8px 10px rgba(0,0,0,.3)); }
+.ns .ni svg { width:100%; height:100%; }
+.ns b { position:relative; font-size:15px; font-weight:900; line-height:1.15; text-shadow:0 2px 6px rgba(0,0,0,.25); }
+.ns small { position:relative; font-size:10.5px; opacity:.88; margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.ns em { position:absolute; top:10px; left:10px; font-style:normal; }
+.ns:active { transform:scale(.95); }
+.nall { width:100%; margin:22px 0 8px; padding:15px; border-radius:18px; border:1px solid var(--nv-line); background:var(--nv-card); color:inherit; font-weight:900; font-size:15px; }
+
+/* ---- раздел «Онлайн» ---- */
+#onl { margin:4px 0 6px; }
+#onl h2 { font-size:24px; font-weight:900; }
+#onl p { font-size:13px; color:var(--nv-mut); margin:4px 0 12px; line-height:1.35; }
+#onl .nfr { border:1px solid var(--nv-line); background:var(--nv-card); color:inherit; font-weight:800; font-size:14px; padding:10px 16px; border-radius:999px; }
+#onl .nnol { margin-top:12px; font-size:12.5px; color:var(--nv-mut); }
+#onl:has(~ #live:not(:empty)) .nnol { display:none; }
+#menu[data-view=online] #live { margin:10px 0 4px; }
+
+/* кнопка поддержки не перекрывает панели */
+html[data-layout=shop] #supBtn { bottom:calc(84px + env(safe-area-inset-bottom)); left:auto; right:14px; width:48px; height:48px; font-size:21px; }
+html[data-layout=desk] #supBtn { bottom:calc(122px + env(safe-area-inset-bottom)); left:auto; right:14px; width:48px; height:48px; font-size:21px; }
+html[data-layout=side] #supBtn { left:13px; bottom:calc(84px + env(safe-area-inset-bottom)); width:48px; height:48px; font-size:21px; }
+/* боковое меню: карточки игр в две колонки */
+html[data-layout=side] #menu .cards { grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
+html[data-layout=side] #menu .card { min-height:168px; }
+html[data-layout=side] #menu .card .ic { width:70px; height:70px; }
+html[data-layout=side] #menu .card h2 { font-size:16px; }

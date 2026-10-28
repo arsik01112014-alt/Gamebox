@@ -8,8 +8,9 @@
 <link rel="stylesheet" id="skinCss" disabled>
 <link rel="stylesheet" id="skin2Css" disabled>
 <link rel="stylesheet" href="css/common.css">
+<link rel="stylesheet" href="css/nav.css">
 <link rel="stylesheet" href="css/skins-ui.css">
-<script>/* стиль интерфейса — до отрисовки, чтобы не мигало */(function(){try{var k=JSON.parse(localStorage.getItem("skin")||'"glass"');var L=["css/style.css","css/skin-minimal.css","css/skin-liquid.css"],S={glass:["css/glass.css"],minimal:["css/style.css","css/skin-minimal.css"],liquid:L,liquiddark:L}[k]||["css/glass.css"];document.getElementById("baseCss").href=S[0];var o=document.getElementById("skinCss");if(S[1]){o.href=S[1];o.disabled=false;}var o2=document.getElementById("skin2Css");if(S[2]){o2.href=S[2];o2.disabled=false;}document.documentElement.setAttribute("data-skin",k);}catch(e){}})();</script>
+<script>/* стиль интерфейса — до отрисовки, чтобы не мигало */(function(){try{var k=JSON.parse(localStorage.getItem("skin")||'"glass"');var L=["css/style.css","css/skin-minimal.css","css/skin-liquid.css"],S={glass:["css/glass.css"],minimal:["css/style.css","css/skin-minimal.css"],liquid:L,liquiddark:L}[k]||["css/glass.css"];document.getElementById("baseCss").href=S[0];var o=document.getElementById("skinCss");if(S[1]){o.href=S[1];o.disabled=false;}var o2=document.getElementById("skin2Css");if(S[2]){o2.href=S[2];o2.disabled=false;}document.documentElement.setAttribute("data-skin",k);var ly=JSON.parse(localStorage.getItem("layout")||'"shop"');document.documentElement.setAttribute("data-layout",ly);}catch(e){}})();</script>
 <script>/* Telegram Mini App: скрипт Telegram грузим только при запуске из Telegram (он передаёт tgWebAppData в адресе).
   Отключаем закрытие приложения свайпом вниз — иначе свайпы в играх сворачивают окно */
 (function(){var h=location.hash+location.search;if(h.indexOf('tgWebApp')<0)return;try{sessionStorage.setItem('inTG','1')}catch(e){}

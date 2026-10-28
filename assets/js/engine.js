@@ -904,6 +904,7 @@
   function show(id) {
     var s = document.querySelectorAll('.screen');
     for (var i = 0; i < s.length; i++) s[i].classList.toggle('active', s[i].id === id);
+    var nv = document.getElementById('nav'); if (nv) nv.style.display = id === 'menu' && store.get('layout', 'shop') !== 'classic' ? '' : 'none';
   }
 
   function applyStaticTexts() {
@@ -961,6 +962,7 @@
     applySort();
     renderRecent();
     renderTabs();
+    renderHome();
   }
 
   /* ---------- уровень игрока и задание дня ---------- */
@@ -1224,6 +1226,122 @@
     startGame(c.getAttribute('data-id'));
   });
 
+  /* ---------- v5.2: интерфейс и навигация — «Витрина», «Рабочий стол», «Боковое меню» или прежняя «Классика» ---------- */
+  var LAYOUTS = ['shop', 'desk', 'side', 'classic'];
+  var NAV_T = {
+    ru: { home: 'Главная', games: 'Игры', online: 'Онлайн', shop: 'Магазин', profile: 'Профиль', top: 'Рейтинг', tasks: 'Задания', more: 'Ещё', all: 'Все', cont: 'Продолжить', duo: 'На двоих и онлайн', fresh: 'Новые игры', fav: 'Избранное', secs: 'Разделы', allGames: 'Все игры', pick: 'Игра дня', play: 'Играть', onlT: 'Онлайн', onlS: 'Играй с людьми по сети: открытые матчи и игры с онлайн-режимом', friends: 'Друзья', noLive: 'Сейчас нет открытых матчей — выбери игру ниже и создай комнату', layout: 'Интерфейс', shopL: 'Витрина', deskL: 'Рабочий стол', sideL: 'Боковое меню', classicL: 'Классика', arcade: 'Аркады', puzzle: 'Головоломки', board: 'Настольные' },
+    en: { home: 'Home', games: 'Games', online: 'Online', shop: 'Shop', profile: 'Profile', top: 'Ranking', tasks: 'Tasks', more: 'More', all: 'All', cont: 'Continue', duo: 'Two players & online', fresh: 'New games', fav: 'Favorites', secs: 'Sections', allGames: 'All games', pick: 'Game of the day', play: 'Play', onlT: 'Online', onlS: 'Play with people online: open matches and games with an online mode', friends: 'Friends', noLive: 'No open matches right now — pick a game below and create a room', layout: 'Interface', shopL: 'Showcase', deskL: 'Home screen', sideL: 'Side menu', classicL: 'Classic', arcade: 'Arcade', puzzle: 'Puzzles', board: 'Board' },
+    uk: { home: 'Головна', games: 'Ігри', online: 'Онлайн', shop: 'Магазин', profile: 'Профіль', top: 'Рейтинг', tasks: 'Завдання', more: 'Ще', all: 'Усі', cont: 'Продовжити', duo: 'Удвох і онлайн', fresh: 'Нові ігри', fav: 'Обране', secs: 'Розділи', allGames: 'Усі ігри', pick: 'Гра дня', play: 'Грати', onlT: 'Онлайн', onlS: 'Грай з людьми по мережі', friends: 'Друзі', noLive: 'Зараз немає відкритих матчів — обери гру нижче й створи кімнату', layout: 'Інтерфейс', shopL: 'Вітрина', deskL: 'Робочий стіл', sideL: 'Бокове меню', classicL: 'Класика', arcade: 'Аркади', puzzle: 'Головоломки', board: 'Настільні' }
+  };
+  function nt(k) { return (NAV_T[I18N.lang] || NAV_T.en)[k] || NAV_T.en[k]; }
+  function layoutOf() { var k = store.get('layout', 'shop'); return LAYOUTS.indexOf(k) >= 0 ? k : 'shop'; }
+  var view = 'home', userCat = menuCat;
+  var NAVS = {
+    shop: [['home', '🏠'], ['games', '🎮'], ['online', '⚔️'], ['shop', '🛍️'], ['profile', '👤']],
+    desk: [['home', '🎮', 'games'], ['online', '⚔️'], ['top', '🏆'], ['shop', '🛍️']],
+    side: [['home', '🎮', 'games'], ['online', '⚔️'], ['top', '🏆'], ['tasks', '🎯'], ['shop', '🛍️'], ['more', '⚙️']]
+  };
+  // какие блоки главного экрана видны в каждом разделе
+  var VIEWS = {
+    shop: { home: ['top', 'prof', 'daily', 'home'], games: ['top', 'hero', 'filters', 'cards', 'empty', 'foot'], online: ['top', 'onl', 'live', 'filters', 'cards', 'empty'] },
+    desk: { home: ['top', 'prof', 'home'], games: ['top', 'filters', 'cards', 'empty'], online: ['top', 'onl', 'live', 'filters', 'cards', 'empty'] },
+    side: { home: ['top', 'home'], games: ['top', 'hero', 'filters', 'cards', 'empty', 'foot'], online: ['top', 'onl', 'live', 'filters', 'cards', 'empty'], tasks: ['top', 'prof', 'daily'] }
+  };
+  var menuEl = $('#menu'), homeEl = document.createElement('div'), onlEl = document.createElement('div'), navEl = document.createElement('nav');
+  homeEl.id = 'home'; onlEl.id = 'onl'; navEl.id = 'nav';
+  menuEl.insertBefore(homeEl, $('#live')); menuEl.insertBefore(onlEl, $('#live')); document.body.appendChild(navEl);
+  var BLOCKS = { top: '.top', prof: '#prof', hero: '.hero', daily: '#daily', live: '#live', filters: '.filters', recentWrap: '#recentWrap', cards: '#cards', empty: '#empty', foot: '.menu-foot', home: '#home', onl: '#onl' };
+  function tileHtml(id, sub) {
+    var d = GAMES[id];
+    return '<button class="nt" data-id="' + id + '" style="--c1:' + d.colors[0] + ';--c2:' + d.colors[1] + '"><span class="ni">' + ico(d.icon) + (isLocked(id) ? '<em>🔒</em>' : '') + '</span>' +
+      '<b>' + escapeHtml(gt(id, 'title')) + '</b>' + (sub ? '<small>' + sub + '</small>' : '') + '</button>';
+  }
+  function bestTxt(id) { var b = best(id, diffOf(id)); return b > 0 ? '🏆 ' + b : escapeHtml(gt(id, 'desc') || ''); }
+  function catIds(cat, n) { return sortedIds().filter(function (id) { return inCat(id, cat); }).slice(0, n || 12); }
+  function freshIds() { return ORDER.filter(function (id) { return GAMES[id].isNew4 || GAMES[id].isNew3; }).reverse(); }
+  function recentIds() { return store.get('recent', []).filter(function (id) { return GAMES[id]; }); }
+  function rowHtml(title, ids, go, cls) {
+    if (!ids.length) return '';
+    return '<div class="nrow-h"><h3>' + title + '</h3>' + (go ? '<button data-go="' + go + '">' + nt('all') + ' ›</button>' : '') + '</div>' +
+      '<div class="nrow ' + (cls || '') + '">' + ids.map(function (id) { return cls === 'shelf' ? shelfHtml(id) : tileHtml(id, bestTxt(id)); }).join('') + '</div>';
+  }
+  function shelfHtml(id) {
+    var d = GAMES[id];
+    return '<button class="ns" data-id="' + id + '" style="--c1:' + d.colors[0] + ';--c2:' + d.colors[1] + '"><span class="ni">' + ico(d.icon) + '</span>' +
+      '<b>' + escapeHtml(gt(id, 'title')) + '</b><small>' + bestTxt(id) + '</small>' + (isLocked(id) ? '<em>🔒</em>' : '') + '</button>';
+  }
+  function heroHtml(id, label) {
+    var d = GAMES[id];
+    return '<button class="nhero" data-id="' + id + '" style="--c1:' + d.colors[0] + ';--c2:' + d.colors[1] + '"><small>' + label + '</small><b>' + escapeHtml(gt(id, 'title')) + '</b>' +
+      '<p>' + escapeHtml(gt(id, 'desc') || '') + '</p><span class="ngo">' + nt('play') + '</span><span class="ni">' + ico(d.icon) + '</span></button>';
+  }
+  function renderHome() {
+    var L = layoutOf(); document.documentElement.setAttribute('data-layout', L);
+    if (L === 'classic') { homeEl.innerHTML = ''; onlEl.innerHTML = ''; navEl.innerHTML = ''; applyView(); return; }
+    var rec = recentIds(), fr = freshIds(), h = '';
+    if (L === 'shop') {
+      var day = Math.floor(Date.now() / 864e5), pick = fr.length ? fr[day % fr.length] : ORDER[day % ORDER.length];
+      h = heroHtml(pick, nt('pick')) + rowHtml(nt('cont'), rec.slice(0, 10)) + rowHtml(nt('duo'), catIds('lan'), 'lan') + rowHtml(nt('fresh'), fr.slice(0, 12)) +
+        rowHtml(nt('arcade'), catIds('arcade'), 'arcade') + rowHtml(nt('puzzle'), catIds('puzzle'), 'puzzle') + rowHtml(nt('board'), catIds('board'), 'board');
+    } else if (L === 'desk') {
+      var fav = favs(), top = (fav.length ? fav : rec).slice(0, 8);
+      ORDER.forEach(function (id) { if (top.length < 8 && top.indexOf(id) < 0 && !isLocked(id)) top.push(id); });
+      var folder = function (cat) {
+        var ids = catIds(cat, 4); if (!ids.length) return '';
+        return '<button class="nf" data-go="' + cat + '"><span class="nfi">' + ids.map(function (id) { var d = GAMES[id]; return '<i style="--c1:' + d.colors[0] + ';--c2:' + d.colors[1] + '">' + ico(d.icon) + '</i>'; }).join('') + '</span>' +
+          '<b>' + (cat === 'fav' ? nt('fav') : cat === 'lan' ? nt('online') : t('cat.' + cat)) + '</b></button>';
+      };
+      h = '<div class="nsec">' + (fav.length ? nt('fav') : nt('cont')) + '</div><div class="ngrid">' + top.map(function (id) { return tileHtml(id); }).join('') + '</div>' +
+        '<div class="nsec">' + nt('secs') + '</div><div class="ngrid">' + ['all', 'arcade', 'puzzle', 'board', 'duo', 'lan', 'fav'].map(folder).join('') + '</div>' +
+        '<div class="nsec">' + nt('fresh') + '</div><div class="ngrid">' + fr.slice(0, 8).map(function (id) { return tileHtml(id); }).join('') + '</div>';
+    } else {
+      var c0 = rec[0];
+      h = (c0 ? '<button class="ncont" data-id="' + c0 + '" style="--c1:' + GAMES[c0].colors[0] + ';--c2:' + GAMES[c0].colors[1] + '"><span class="ni">' + ico(GAMES[c0].icon) + '</span><span class="nct"><small>' + nt('cont') + '</small><b>' + escapeHtml(gt(c0, 'title')) + '</b><small>' + bestTxt(c0) + '</small></span><span class="ngo">▶</span></button>' : heroHtml(fr[0] || ORDER[0], nt('pick'))) +
+        rowHtml(nt('duo'), catIds('lan'), 'lan', 'shelf') + rowHtml(nt('fresh'), fr.slice(0, 10), '', 'shelf') + rowHtml(nt('arcade'), catIds('arcade'), 'arcade', 'shelf') +
+        rowHtml(nt('puzzle'), catIds('puzzle'), 'puzzle', 'shelf') + rowHtml(nt('board'), catIds('board'), 'board', 'shelf') +
+        '<button class="nall" data-go="all">' + nt('allGames') + ' · ' + ORDER.length + ' ›</button>';
+    }
+    homeEl.innerHTML = h;
+    onlEl.innerHTML = '<h2>' + nt('onlT') + '</h2><p>' + nt('onlS') + '</p><button class="nfr" data-act="friends">👥 ' + nt('friends') + '</button><div class="nnol">' + nt('noLive') + '</div>';
+    navEl.innerHTML = (L === 'side' ? '<button class="nav-av" data-act="profile">' + avH(avatar()) + '</button>' : '') + NAVS[L].map(function (n) {
+      return '<button data-nav="' + n[0] + '"><span>' + n[1] + '</span>' + nt(n[2] || n[0]) + '</button>';
+    }).join('');
+    applyView();
+  }
+  function applyView() {
+    var L = layoutOf(), on = L === 'classic' ? null : (VIEWS[L][view] || VIEWS[L].home);
+    if (on && !VIEWS[L][view]) view = 'home';
+    Object.keys(BLOCKS).forEach(function (k) { var el = menuEl.querySelector(BLOCKS[k]); if (el) el.classList.toggle('nv-off', !!on && on.indexOf(k) < 0); });
+    menuEl.setAttribute('data-view', L === 'classic' ? '' : view);
+    navEl.style.display = L !== 'classic' && App.state === 'menu' ? '' : 'none';
+    var bs = navEl.querySelectorAll('[data-nav]');
+    for (var i = 0; i < bs.length; i++) bs[i].classList.toggle('on', bs[i].getAttribute('data-nav') === view);
+  }
+  function goView(v, cat) {
+    if (view === 'online' && v !== 'online') menuCat = userCat; // «Онлайн» временно показывает только сетевые игры
+    if (v === 'online' && view !== 'online') { userCat = menuCat; menuCat = 'lan'; }
+    else if (v === 'games' && cat) { menuCat = cat; store.set('menuCat', menuCat); }
+    view = v; renderTabs(); applyView(); menuEl.scrollTop = 0;
+  }
+  function navAct(k) {
+    Sound.init(); Sound.play('click');
+    if (k === 'shop') $('#coinBtn').click();
+    else if (k === 'profile') $('#prof').click();
+    else if (k === 'top') openOverall();
+    else if (k === 'more') openSettings();
+    else if (k === 'friends') openFriends();
+    else goView(k);
+  }
+  navEl.addEventListener('click', function (e) { var b = e.target.closest('[data-nav],[data-act]'); if (b) navAct(b.getAttribute('data-nav') || b.getAttribute('data-act')); });
+  onlEl.addEventListener('click', function (e) { var b = e.target.closest('[data-act]'); if (b) navAct(b.getAttribute('data-act')); });
+  homeEl.addEventListener('click', function (e) {
+    if (!safeTap()) return;
+    var g = e.target.closest('[data-go]'); if (g) { Sound.init(); Sound.play('click'); goView('games', g.getAttribute('data-go')); return; }
+    var c = e.target.closest('[data-id]'); if (c) { Sound.init(); Sound.play('click'); startGame(c.getAttribute('data-id')); }
+  });
+  // вертикальная прокрутка не должна мешать горизонтальным рядам
+  homeEl.addEventListener('touchstart', function () { }, { passive: true });
+
   /* ---------- настройки ---------- */
   var sheet = $('#settings'), resetArmed = 0;
   var SET_IC = { sound: '🔊', music: '🎵', vibro: '📳', showFps: '📈', reset: '🗑️', fx: '✨' };
@@ -1242,6 +1360,7 @@
     }).join('');
     $('#setBody').innerHTML =
       '<h3>' + t('set.title') + '</h3>' +
+      '<div class="sec">' + nt('layout') + '</div>' + segHtml('data-layout', LAYOUTS, layoutOf(), function (v) { return nt(v + 'L'); }) +
       '<div class="sec">' + t('skin.title') + '</div><div class="skins">' + SKINS.map(function (k) { return '<button class="skb' + (k === skinOf() ? ' on' : '') + '" data-skin="' + k + '"><i class="skp skp-' + k + '"></i><span>' + t('skin.' + k) + '</span></button>'; }).join('') + '</div>' +
       '<div class="sec">' + t('set.lang') + '</div><div class="langs">' + langs + '</div>' +
       '<div class="sec">' + t('set.secGraphics') + '</div>' +
@@ -1263,7 +1382,7 @@
       '<button class="btn" data-set="close">' + t('set.done') + '</button>' +
       '<div class="ver">' + t('set.version') + ' ' + APP_NAME + '</div>';
   }
-  var APP_NAME = '5.1', APP_CODE = 51, updInfo = null, updBarHidden = false;
+  var APP_NAME = '5.2', APP_CODE = 52, updInfo = null, updBarHidden = false;
   // обновление APK: в /app/latest лежит {code, name, notes, url}, админка публикует его кнопкой.
   // WebView приложения не умеет скачивать файлы сам, поэтому «Скачать» копирует ссылку для браузера
   function checkUpdate() {
@@ -1910,6 +2029,8 @@
     var lbz = e.target.closest('[data-lbd]');
     if (lbz) { openLb(App.id, +lbz.getAttribute('data-lbd')); return; }
     // data-skin стоит и на корне страницы: без проверки любой тап в окне считался выбором скина и открывал настройки
+    var lyz = e.target.closest('[data-layout]');
+    if (lyz && sheet.contains(lyz)) { store.set('layout', lyz.getAttribute('data-layout')); view = 'home'; renderHome(); Sound.play('rotate'); renderSettings(); return; }
     var skz = e.target.closest('[data-skin]');
     if (skz && sheet.contains(skz)) { store.set('skin', skz.getAttribute('data-skin')); applySkin(); Sound.play('rotate'); renderSettings(); return; }
     if (qz) { Gfx.quality = +qz.getAttribute('data-q'); store.set('quality', Gfx.quality); sizeBg(); Sound.play('click'); renderSettings(); return; }
@@ -2591,7 +2712,7 @@
   window.onAppPause = function () { if (App.mode !== 2) pause(); Music.stop(); };
   window.onBackButton = function () {
     if (sheet.classList.contains('show')) { closeSettings(); return true; }
-    if (App.state === 'menu') return false;
+    if (App.state === 'menu') { if (layoutOf() !== 'classic' && view !== 'home') { goView('home'); return true; } return false; }
     if (App.state === 'playing') pause();
     else toMenu();
     return true;
