@@ -1157,6 +1157,7 @@
   if (TABS.indexOf(menuCat) < 0) menuCat = 'all';
   function inCat(id, cat) {
     var d = GAMES[id];
+    if (hiddenG[id]) return false; // игру скрыл админ
     if (cat === 'all') return true;
     if (cat === 'fav') return isFav(id);
     if (cat === 'duo') return !!d.modes || id === 'pong';
@@ -1229,9 +1230,9 @@
   /* ---------- v5.2: интерфейс и навигация — «Витрина», «Рабочий стол», «Боковое меню» или прежняя «Классика» ---------- */
   var LAYOUTS = ['shop', 'desk', 'side', 'classic'];
   var NAV_T = {
-    ru: { home: 'Главная', games: 'Игры', online: 'Онлайн', shop: 'Магазин', profile: 'Профиль', top: 'Рейтинг', tasks: 'Задания', more: 'Ещё', all: 'Все', cont: 'Продолжить', duo: 'На двоих и онлайн', fresh: 'Новые игры', fav: 'Избранное', secs: 'Разделы', allGames: 'Все игры', pick: 'Игра дня', play: 'Играть', onlT: 'Онлайн', onlS: 'Играй с людьми по сети: открытые матчи и игры с онлайн-режимом', friends: 'Друзья', noLive: 'Сейчас нет открытых матчей — выбери игру ниже и создай комнату', layout: 'Интерфейс', shopL: 'Витрина', deskL: 'Рабочий стол', sideL: 'Боковое меню', classicL: 'Классика', arcade: 'Аркады', puzzle: 'Головоломки', board: 'Настольные' },
-    en: { home: 'Home', games: 'Games', online: 'Online', shop: 'Shop', profile: 'Profile', top: 'Ranking', tasks: 'Tasks', more: 'More', all: 'All', cont: 'Continue', duo: 'Two players & online', fresh: 'New games', fav: 'Favorites', secs: 'Sections', allGames: 'All games', pick: 'Game of the day', play: 'Play', onlT: 'Online', onlS: 'Play with people online: open matches and games with an online mode', friends: 'Friends', noLive: 'No open matches right now — pick a game below and create a room', layout: 'Interface', shopL: 'Showcase', deskL: 'Home screen', sideL: 'Side menu', classicL: 'Classic', arcade: 'Arcade', puzzle: 'Puzzles', board: 'Board' },
-    uk: { home: 'Головна', games: 'Ігри', online: 'Онлайн', shop: 'Магазин', profile: 'Профіль', top: 'Рейтинг', tasks: 'Завдання', more: 'Ще', all: 'Усі', cont: 'Продовжити', duo: 'Удвох і онлайн', fresh: 'Нові ігри', fav: 'Обране', secs: 'Розділи', allGames: 'Усі ігри', pick: 'Гра дня', play: 'Грати', onlT: 'Онлайн', onlS: 'Грай з людьми по мережі', friends: 'Друзі', noLive: 'Зараз немає відкритих матчів — обери гру нижче й створи кімнату', layout: 'Інтерфейс', shopL: 'Вітрина', deskL: 'Робочий стіл', sideL: 'Бокове меню', classicL: 'Класика', arcade: 'Аркади', puzzle: 'Головоломки', board: 'Настільні' }
+    ru: { onl: 'игроков онлайн', home: 'Главная', games: 'Игры', online: 'Онлайн', shop: 'Магазин', profile: 'Профиль', top: 'Рейтинг', tasks: 'Задания', more: 'Ещё', all: 'Все', cont: 'Продолжить', duo: 'На двоих и онлайн', fresh: 'Новые игры', fav: 'Избранное', secs: 'Разделы', allGames: 'Все игры', pick: 'Игра дня', play: 'Играть', onlT: 'Онлайн', onlS: 'Играй с людьми по сети: открытые матчи и игры с онлайн-режимом', friends: 'Друзья', noLive: 'Сейчас нет открытых матчей — выбери игру ниже и создай комнату', layout: 'Интерфейс', shopL: 'Витрина', deskL: 'Рабочий стол', sideL: 'Боковое меню', classicL: 'Классика', arcade: 'Аркады', puzzle: 'Головоломки', board: 'Настольные' },
+    en: { onl: 'players online', home: 'Home', games: 'Games', online: 'Online', shop: 'Shop', profile: 'Profile', top: 'Ranking', tasks: 'Tasks', more: 'More', all: 'All', cont: 'Continue', duo: 'Two players & online', fresh: 'New games', fav: 'Favorites', secs: 'Sections', allGames: 'All games', pick: 'Game of the day', play: 'Play', onlT: 'Online', onlS: 'Play with people online: open matches and games with an online mode', friends: 'Friends', noLive: 'No open matches right now — pick a game below and create a room', layout: 'Interface', shopL: 'Showcase', deskL: 'Home screen', sideL: 'Side menu', classicL: 'Classic', arcade: 'Arcade', puzzle: 'Puzzles', board: 'Board' },
+    uk: { onl: 'гравців онлайн', home: 'Головна', games: 'Ігри', online: 'Онлайн', shop: 'Магазин', profile: 'Профіль', top: 'Рейтинг', tasks: 'Завдання', more: 'Ще', all: 'Усі', cont: 'Продовжити', duo: 'Удвох і онлайн', fresh: 'Нові ігри', fav: 'Обране', secs: 'Розділи', allGames: 'Усі ігри', pick: 'Гра дня', play: 'Грати', onlT: 'Онлайн', onlS: 'Грай з людьми по мережі', friends: 'Друзі', noLive: 'Зараз немає відкритих матчів — обери гру нижче й створи кімнату', layout: 'Інтерфейс', shopL: 'Вітрина', deskL: 'Робочий стіл', sideL: 'Бокове меню', classicL: 'Класика', arcade: 'Аркади', puzzle: 'Головоломки', board: 'Настільні' }
   };
   function nt(k) { return (NAV_T[I18N.lang] || NAV_T.en)[k] || NAV_T.en[k]; }
   function layoutOf() { var k = store.get('layout', 'shop'); return LAYOUTS.indexOf(k) >= 0 ? k : 'shop'; }
@@ -1258,8 +1259,8 @@
   }
   function bestTxt(id) { var b = best(id, diffOf(id)); return b > 0 ? '🏆 ' + b : escapeHtml(gt(id, 'desc') || ''); }
   function catIds(cat, n) { return sortedIds().filter(function (id) { return inCat(id, cat); }).slice(0, n || 12); }
-  function freshIds() { return ORDER.filter(function (id) { return GAMES[id].isNew4 || GAMES[id].isNew3; }).reverse(); }
-  function recentIds() { return store.get('recent', []).filter(function (id) { return GAMES[id]; }); }
+  function freshIds() { return ORDER.filter(function (id) { return (GAMES[id].isNew4 || GAMES[id].isNew3) && !hiddenG[id]; }).reverse(); }
+  function recentIds() { return store.get('recent', []).filter(function (id) { return GAMES[id] && !hiddenG[id]; }); }
   function rowHtml(title, ids, go, cls) {
     if (!ids.length) return '';
     return '<div class="nrow-h"><h3>' + title + '</h3>' + (go ? '<button data-go="' + go + '">' + nt('all') + ' ›</button>' : '') + '</div>' +
@@ -1280,8 +1281,8 @@
     if (L === 'classic') { homeEl.innerHTML = ''; onlEl.innerHTML = ''; navEl.innerHTML = ''; applyView(); return; }
     var rec = recentIds(), fr = freshIds(), h = '';
     if (L === 'shop') {
-      var day = Math.floor(Date.now() / 864e5), pick = fr.length ? fr[day % fr.length] : ORDER[day % ORDER.length];
-      h = heroHtml(pick, nt('pick')) + rowHtml(nt('cont'), rec.slice(0, 10)) + rowHtml(nt('duo'), catIds('lan'), 'lan') + rowHtml(nt('fresh'), fr.slice(0, 12)) +
+      var day = Math.floor(Date.now() / 864e5), F = appCfg.featured, pick = F && GAMES[F.id] && !hiddenG[F.id] ? F.id : fr.length ? fr[day % fr.length] : ORDER[day % ORDER.length];
+      h = heroHtml(pick, F && F.id === pick && F.l ? escapeHtml(F.l) : nt('pick')) + rowHtml(nt('cont'), rec.slice(0, 10)) + rowHtml(nt('duo'), catIds('lan'), 'lan') + rowHtml(nt('fresh'), fr.slice(0, 12)) +
         rowHtml(nt('arcade'), catIds('arcade'), 'arcade') + rowHtml(nt('puzzle'), catIds('puzzle'), 'puzzle') + rowHtml(nt('board'), catIds('board'), 'board');
     } else if (L === 'desk') {
       var fav = favs(), top = (fav.length ? fav : rec).slice(0, 8);
@@ -1301,7 +1302,7 @@
         rowHtml(nt('puzzle'), catIds('puzzle'), 'puzzle', 'shelf') + rowHtml(nt('board'), catIds('board'), 'board', 'shelf') +
         '<button class="nall" data-go="all">' + nt('allGames') + ' · ' + ORDER.length + ' ›</button>';
     }
-    homeEl.innerHTML = h;
+    homeEl.innerHTML = '<div class="nonline"><i></i><b id="nOnline">' + (onlineN || '…') + '</b> ' + nt('onl') + '</div>' + bannerHtml() + h;
     onlEl.innerHTML = '<h2>' + nt('onlT') + '</h2><p>' + nt('onlS') + '</p><button class="nfr" data-act="friends">👥 ' + nt('friends') + '</button><div class="nnol">' + nt('noLive') + '</div>';
     navEl.innerHTML = (L === 'side' ? '<button class="nav-av" data-act="profile">' + avH(avatar()) + '</button>' : '') + NAVS[L].map(function (n) {
       return '<button data-nav="' + n[0] + '"><span>' + n[1] + '</span>' + nt(n[2] || n[0]) + '</button>';
@@ -1382,7 +1383,7 @@
       '<button class="btn" data-set="close">' + t('set.done') + '</button>' +
       '<div class="ver">' + t('set.version') + ' ' + APP_NAME + '</div>';
   }
-  var APP_NAME = '5.4', APP_CODE = 54, updInfo = null, updBarHidden = false;
+  var APP_NAME = '5.5', APP_CODE = 55, updInfo = null, updBarHidden = false;
   // обновление APK: в /app/latest лежит {code, name, notes, url}, админка публикует его кнопкой.
   // WebView приложения не умеет скачивать файлы сам, поэтому «Скачать» копирует ссылку для браузера
   function checkUpdate() {
@@ -1740,18 +1741,65 @@
   var evMul = 1;
   function checkApp() {
     Online.req('GET', '/app', undefined, function (e, A) {
+      cfgTried = true;
       if (e || !A) return;
       var N = A.news;
       if (N && N.id && N.text && store.get('newsSeen', 0) !== N.id) { store.set('newsSeen', N.id); adminNote(N.title || '📢 Объявление', N.text); }
       var E = A.event;
+      applyCfg(A);
       evMul = E && E.mul > 1 && E.until > Date.now() ? +E.mul : 1;
-      if (evMul > 1 && store.get('evSeen', 0) !== E.until) { store.set('evSeen', E.until); api.toast('🎉 ' + (E.title || 'Событие') + ': монеты ×' + evMul + ' до ' + new Date(E.until).toLocaleString('ru-RU', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })); }
+      evXp = E && E.xp > 1 && E.until > Date.now() ? +E.xp : 1;
+      if ((evMul > 1 || evXp > 1) && store.get('evSeen', 0) !== E.until) { store.set('evSeen', E.until); api.toast('🎉 ' + (E.title || 'Событие') + ': ' + [evMul > 1 ? 'монеты ×' + evMul : '', evXp > 1 ? 'опыт ×' + evXp : ''].filter(Boolean).join(', ') + ' до ' + new Date(E.until).toLocaleString('ru-RU', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })); }
       var M = A.maint, el = document.getElementById('maint');
       if (M && M.on) {
         if (!el) el = document.body.appendChild(Object.assign(document.createElement('div'), { id: 'maint' }));
         el.innerHTML = '<div class="acct-card"><div style="font-size:48px">🛠</div><h3>Технические работы</h3><p>' + escapeHtml(M.text || 'Скоро всё заработает. Загляни чуть позже!') + '</p></div>';
       } else if (el) el.remove();
     });
+  }
+  /* ---------- v5.5: настройки из админки (игра дня, скрытые игры, баннер, календарь наград) и счётчик онлайна ---------- */
+  var appCfg = store.get('appCfg', {}) || {}, hiddenG = {}, onlineN = 0, evXp = 1, cfgTried = false, bootT = Date.now();
+  function cfgHidden() { hiddenG = {}; var h = appCfg.hidden || {}; Object.keys(h).forEach(function (id) { if (h[id]) hiddenG[id] = 1; }); }
+  cfgHidden();
+  function applyCfg(A) {
+    var dl = A.daily ? (Array.isArray(A.daily) ? A.daily : Object.keys(A.daily).sort().map(function (k) { return A.daily[k]; })) : null;
+    var nc = { featured: A.featured || null, hidden: A.hidden || null, banner: A.banner || null, daily: dl };
+    if (JSON.stringify(nc) === JSON.stringify(appCfg)) return;
+    appCfg = nc; store.set('appCfg', appCfg); cfgHidden();
+    if (App.state === 'menu') renderMenu();
+  }
+  function fetchOnline() {
+    if (document.hidden || !Online.ok()) return;
+    Online.req('GET', '/lb/_seen_0', undefined, function (e, r) {
+      if (e || !r) return; onlineN = Object.keys(r).length;
+      var el = document.getElementById('nOnline'); if (el) el.textContent = onlineN;
+    }, 'orderBy=%22s%22&startAt=' + (Date.now() - 180000));
+  }
+  setInterval(fetchOnline, 60000); setTimeout(fetchOnline, 4000);
+  // календарь входа: 7 дней подряд, награда растёт; пропуск дня — заново с первого
+  var DAILY_DEF = [20, 30, 40, 60, 80, 100, 250];
+  function loginReward() {
+    var d = today(), L = store.get('login', { d: '', n: 0 });
+    if (L.d === d || document.getElementById('loginCal')) return;
+    var n = L.d === today(-1) ? L.n % 7 + 1 : 1, R = appCfg.daily && appCfg.daily.length === 7 ? appCfg.daily.map(Number) : DAILY_DEF;
+    var el = document.body.appendChild(Object.assign(document.createElement('div'), { id: 'loginCal' }));
+    el.innerHTML = '<div class="acct-card upd-card"><h3>🎁 Награда за вход</h3><p>Заходи каждый день подряд — награда растёт. Пропустишь день — начнёшь сначала.</p><div class="lcal">' +
+      R.map(function (v, i) { return '<div class="lday' + (i + 1 < n ? ' got' : i + 1 === n ? ' now' : '') + (i === 6 ? ' big' : '') + '"><small>День ' + (i + 1) + '</small><b>' + (i === 6 ? '🎁' : '🪙') + '</b><span>' + v + '</span></div>'; }).join('') +
+      '</div><button class="btn" data-lcal="1">Забрать +' + R[n - 1] + ' 🪙</button></div>';
+    el.querySelector('[data-lcal]').addEventListener('click', function () {
+      store.set('login', { d: d, n: n }); addCoins(R[n - 1]); Sound.play('bonus');
+      el.remove(); renderProfileChip();
+    });
+  }
+  (function waitLogin() {
+    var busy = document.getElementById('acct') || document.getElementById('acctNick') || document.getElementById('admNote') || document.getElementById('updModal') || document.getElementById('banned') || document.getElementById('maint') || document.querySelector('.sheet.show') || App.state !== 'menu' || (!cfgTried && Date.now() - bootT < 10000);
+    if (busy) setTimeout(waitLogin, 2000); else loginReward();
+  })();
+  function bannerHtml() {
+    var B = appCfg.banner; if (!B || !B.text) return '';
+    var g = B.game && GAMES[B.game] ? B.game : '';
+    return '<button class="nbanner"' + (g ? ' data-id="' + g + '"' : '') + ' style="--bc:' + (/^#[0-9a-f]{3,8}$/i.test(B.col || '') ? B.col : '#7c5cff') + '">' + (g ? '<span class="ni" style="--c1:' + GAMES[g].colors[0] + ';--c2:' + GAMES[g].colors[1] + '">' + ico(GAMES[g].icon) + '</span>' : '<span class="nbi">📢</span>') +
+      '<span class="nbt">' + escapeHtml(B.text) + '</span>' + (g ? '<span class="nbg">▶</span>' : '') + '</button>';
   }
   function checkIpBan() { Online.req('GET', '/ipbans/' + ipKey(myIp), undefined, function (e, v) { banIp = !e && !!v; setBanned(); }); }
   var banInfo = null;
@@ -2356,6 +2404,7 @@
     if (boostLeft() > 0) r.coins *= 2; // бустер «×2 монеты» из магазина
     if (evMul > 1) r.coins = Math.round(r.coins * evMul); // событие из админки
     addCoins(r.coins);
+    if (evXp > 1) r.xp = Math.round(r.xp * evXp); // событие «опыт ×N» из админки
     var xp0 = store.get('xp', 0);
     r.L0 = lvlInfo(xp0); r.L1 = lvlInfo(xp0 + r.xp);
     store.set('xp', xp0 + r.xp);
@@ -2778,7 +2827,7 @@
   if (!store.get('onboard', false)) {
     $('#setBody').innerHTML = '<div class="onb"><div class="big">🎮</div><h3>' + t('onb.title') + '</h3><p class="note pnote">' + t('onb.sub') + '</p>' +
       '<div class="pname"><button class="av" data-shop="1">' + avH(avatar()) + '</button><input id="pnameIn" maxlength="16"' + (store.get('acct', null) ? ' readonly' : '') + ' value="' + escapeHtml(deviceName()) + '" placeholder="' + t('prof.name') + '"></div>' +
-      '<ul><li>' + t('onb.l1') + '</li><li>' + t('onb.l2') + '</li><li>' + t('onb.l3') + '</li><li>' + t('onb.l4') + '</li></ul>' +
+      '<ul><li>' + String(t('onb.l1')).replace(/\d+/, ORDER.length) + '</li><li>' + t('onb.l2') + '</li><li>' + t('onb.l3') + '</li><li>' + t('onb.l4') + '</li></ul>' +
       '<button class="btn" id="onbGo" data-set="close">' + t('onb.go') + '</button></div>';
     sheet.classList.add('show', 'profile'); store.set('onboard', true);
   } else setTimeout(checkAch, 800);

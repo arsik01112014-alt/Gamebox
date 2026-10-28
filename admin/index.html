@@ -47,6 +47,9 @@ pre { background:var(--card); border:1px solid var(--line); border-radius:12px; 
 .sheet { width:100%; max-width:720px; max-height:92vh; overflow:auto; background:var(--bg); border-radius:22px 22px 0 0; padding:18px 16px 24px; border-top:1px solid var(--line); }
 .phead { display:flex; align-items:center; gap:14px; }
 .phead .av { width:64px; height:64px; font-size:34px; }
+.gl { display:flex; flex-wrap:wrap; gap:6px; margin:8px 0 20px; }
+.gch { padding:7px 11px; font-size:13px; border-radius:999px; background:var(--card); border:1px solid var(--line); border-left:4px solid var(--a); color:inherit; }
+.gch.off { opacity:.55; text-decoration:line-through; background:var(--card2); }
 .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin:12px 0; }
 .kv { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:10px; } .kv small { display:block; color:var(--muted); font-size:12px; } .kv b { word-break:break-all; }
 .acts { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:10px; }
@@ -79,11 +82,16 @@ pre { background:var(--card); border:1px solid var(--line); border-radius:12px; 
 var FB = { key: 'AIzaSyDglJuu3uT8vIrAsLByo8cqMWywbS1rgxw', db: 'https://gamebox-73da2-default-rtdb.europe-west1.firebasedatabase.app' };
 var ONLINE_MS = 3 * 60 * 1000, ROOM_MS = 45000;
 var BADGES = { creator: ['👑', 'Создатель'], admin: ['🛡️', 'Админ'], moder: ['🔨', 'Модератор'], tester: ['🧪', 'Тестер'], vip: ['💎', 'VIP'], verified: ['✅', 'Проверен'] };
-var TABS = [['home', '📊 Обзор'], ['chat', '💬 Поддержка'], ['players', '👥 Игроки'], ['bans', '🚫 Баны'], ['rooms', '🎮 Комнаты'], ['top', '🏆 Рейтинг'], ['promos', '🎁 Промокоды'], ['news', '📢 Рассылка'], ['stats', '📈 Статистика'], ['setup', '⚙️ Настройка']];
+var TABS = [['home', '📊 Обзор'], ['chat', '💬 Поддержка'], ['players', '👥 Игроки'], ['bans', '🚫 Баны'], ['rooms', '🎮 Комнаты'], ['top', '🏆 Рейтинг'], ['promos', '🎁 Промокоды'], ['news', '📢 Рассылка'], ['games', '🕹 Игры'], ['stats', '📈 Статистика'], ['setup', '⚙️ Настройка']];
 var FILTERS = [['all', 'Все'], ['on', 'Онлайн'], ['sus', '⚠️ Подозрительные'], ['guest', 'Гости'], ['google', 'Google'], ['ban', 'Забанены'], ['badge', 'Со значками']];
 var SORTS = [['seen', 'Недавние'], ['lv', 'Уровень'], ['co', 'Монеты'], ['pl', 'Партии'], ['new', 'Новые']], srt = 'seen';
 var tab = 'home', flt = 'all', query = '', D = null, me = null, openUid = null, chatUid = null, seenSup = null;
 
+var GL = null; // список игр с сайта (games.json)
+function loadGames() { fetch('https://arsik01112014-alt.github.io/Gamebox/games.json?t=' + Date.now()).then(function (r) { return r.json(); }).then(function (j) { GL = j; if (tab === 'games') render(); }).catch(function () { GL = GL || []; if (tab === 'games') render(); }); }
+function gTitle(id) { var g = GL && GL.filter(function (x) { return x.id === id; })[0]; return g ? g.t : id; }
+var QR_DEF = ['Спасибо, передал разработчику!', 'Исправим в следующем обновлении 👍', 'Обнови игру до последней версии', 'Начислил монеты в подарок 🎁'];
+function qrList() { var q = ls('adm_qr'); return q && q.length ? q : QR_DEF.slice(); }
 function $(s) { return document.querySelector(s); }
 function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return '&#' + c.charCodeAt(0) + ';'; }); }
 function ls(k, v) { try { if (v === undefined) return JSON.parse(localStorage.getItem(k)); localStorage.setItem(k, JSON.stringify(v)); } catch (e) { return null; } }
@@ -244,7 +252,7 @@ function render() {
       v.innerHTML = '<div class="row"><button class="sec" data-act="chat-back">←</button><div class="m click" data-uid="' + esc(cur.u) + '"><b>' + GBAV.html(cur.meta.a || pl.a || 'i:kid') + ' ' + esc(cur.meta.n || pl.n || 'Игрок') + '</b><small>ID ' + esc(cur.u.slice(0, 10)) + ' · профиль игрока ›</small></div></div>' +
         '<div id="chatList" class="chat">' + chatMsgsHtml(cur) + '</div>' +
         '<div class="chatin"><textarea id="cr" rows="2" maxlength="500" placeholder="Ответ игроку…"></textarea><button data-act="chat-send">➤</button></div>' +
-        '<div class="qr">' + ['Спасибо, передал разработчику!', 'Исправим в следующем обновлении 👍', 'Обнови игру до последней версии', 'Начислил монеты в подарок 🎁'].map(function (q) { return '<button class="sec" data-act="chat-q" data-id="' + esc(q) + '">' + esc(q) + '</button>'; }).join('') + '</div>';
+        '<div class="qr">' + qrList().map(function (q, i) { return '<button class="sec" data-act="chat-q" data-id="' + esc(q) + '">' + esc(q) + '</button>'; }).join('') + '<button class="sec" data-act="qr-add" title="Сохранить текст из поля как шаблон">＋ шаблон</button><button class="sec" data-act="qr-edit">✎</button></div>';
       var cl = $('#chatList'); cl.scrollTop = cl.scrollHeight;
     } else v.innerHTML = warn + '<h2>Обращения (' + C.length + ')</h2>' + (C.length ? C.map(function (c) {
       var pl = D.byId[c.u] || {}, lastM = c.msgs[c.msgs.length - 1] || {};
@@ -292,15 +300,15 @@ function render() {
           '<button class="sec" data-act="promo-copy" data-id="' + esc(v.code || '') + '">📋</button><button class="red" data-act="promo-del" data-id="' + esc(x.h) + '">✕</button></div>';
       }).join('') : '<p class="note">Пока нет.</p>');
   } else if (tab === 'news') {
-    var A = D.app || {}, N = A.news || {}, E = A.event || {}, M = A.maint || {}, evOn = E.mul > 1 && E.until > now;
+    var A = D.app || {}, N = A.news || {}, E = A.event || {}, M = A.maint || {}, evOn = (E.mul > 1 || E.xp > 1) && E.until > now;
     v.innerHTML = warn + '<h2>📢 Объявление всем игрокам</h2><div class="row" style="display:block">' +
       (N.text ? '<p class="note" style="margin-top:0">Сейчас: «' + esc(N.title || '') + ' ' + esc(N.text) + '» · ' + ago(N.t) + '</p>' : '<p class="note" style="margin-top:0">Объявлений нет.</p>') +
       '<input id="nt" placeholder="Заголовок (необязательно)" style="margin-bottom:8px"><textarea id="nx" rows="3" placeholder="Текст объявления" style="width:100%;margin-bottom:8px"></textarea>' +
       '<div class="acts" style="margin:0"><button data-act="news-send">📨 Отправить всем</button>' + (N.text ? '<button class="red" data-act="news-del">Убрать</button>' : '') + '</div>' +
       '<p class="note">Каждый игрок увидит окно один раз, при следующем заходе в игру (в течение минуты, если игра открыта).</p></div>' +
-      '<h2>🎉 Событие: больше монет</h2><div class="row" style="display:block">' +
-      '<p class="note" style="margin-top:0">' + (evOn ? 'Идёт: «' + esc(E.title || 'Событие') + '», монеты ×' + E.mul + ' до ' + new Date(E.until).toLocaleString('ru-RU') : 'Сейчас событий нет.') + '</p>' +
-      '<input id="et" placeholder="Название, например «Выходные»" style="margin-bottom:8px"><div class="grid2" style="margin:0 0 8px"><select id="em"><option value="2">×2 монеты</option><option value="3">×3 монеты</option><option value="5">×5 монет</option></select>' +
+      '<h2>🎉 Событие: больше монет или опыта</h2><div class="row" style="display:block">' +
+      '<p class="note" style="margin-top:0">' + (evOn ? 'Идёт: «' + esc(E.title || 'Событие') + '», ' + [E.mul > 1 ? 'монеты ×' + E.mul : '', E.xp > 1 ? 'опыт ×' + E.xp : ''].filter(Boolean).join(', ') + ' до ' + new Date(E.until).toLocaleString('ru-RU') : 'Сейчас событий нет.') + '</p>' +
+      '<input id="et" placeholder="Название, например «Выходные»" style="margin-bottom:8px"><div class="grid2" style="margin:0 0 8px"><select id="em"><option value="2">×2</option><option value="3">×3</option><option value="5">×5</option></select><select id="ew"><option value="c">монеты</option><option value="x">опыт (XP)</option><option value="cx">монеты и опыт</option></select>' +
       '<select id="eh"><option value="1">на 1 час</option><option value="3">на 3 часа</option><option value="24" selected>на сутки</option><option value="72">на 3 дня</option><option value="168">на неделю</option></select></div>' +
       '<div class="acts" style="margin:0"><button data-act="ev-start">▶ Запустить</button>' + (evOn ? '<button class="red" data-act="ev-stop">Остановить</button>' : '') + '</div></div>' +
       '<h2>🎁 Подарок всем игрокам</h2><div class="row" style="display:block"><div class="grid2" style="margin:0 0 8px"><input id="ga" type="number" placeholder="Монеты" value="100"><input id="gam" placeholder="Сообщение, например «С праздником!»"></div>' +
@@ -309,6 +317,24 @@ function render() {
       '<p class="note" style="margin-top:0">' + (M.on ? '⛔ Включены: игроки видят экран техработ и не могут играть.' : 'Выключены.') + '</p>' +
       '<input id="mt" placeholder="Текст для игроков" value="' + esc(M.text || '') + '" style="margin-bottom:8px">' +
       (M.on ? '<button class="green" data-act="maint-off" style="width:100%">✅ Выключить техработы</button>' : '<button class="amber" data-act="maint-on" style="width:100%">⛔ Включить техработы</button>') + '</div>';
+  } else if (tab === 'games') {
+    if (!GL) { loadGames(); v.innerHTML = '<p class="note">Загружаю список игр с сайта…</p>'; return; }
+    var A2 = D.app || {}, F = A2.featured || {}, HID = A2.hidden || {}, B = A2.banner || {}, DR = A2.daily ? (Array.isArray(A2.daily) ? A2.daily : Object.keys(A2.daily).sort().map(function (k) { return A2.daily[k]; })) : [20, 30, 40, 60, 80, 100, 250];
+    var opts = function (cur) { return '<option value="">— не выбрано —</option>' + GL.map(function (g) { return '<option value="' + g.id + '"' + (g.id === cur ? ' selected' : '') + '>' + esc(g.t) + '</option>'; }).join(''); };
+    var nh = Object.keys(HID).filter(function (k) { return HID[k]; }).length;
+    v.innerHTML = warn + (GL.length ? '' : '<p class="note">⚠️ Не удалось загрузить список игр с сайта — проверь интернет.</p>') +
+      '<h2>⭐ Игра дня</h2><div class="row" style="display:block"><p class="note" style="margin-top:0">Большая карточка вверху главной в интерфейсе «Витрина». ' + (F.id ? 'Сейчас: <b>' + esc(gTitle(F.id)) + '</b>' : 'Сейчас выбирается сама из новых игр.') + '</p>' +
+      '<select id="fg" style="margin-bottom:8px">' + opts(F.id) + '</select><input id="fl" placeholder="Подпись, например «Новинка недели»" value="' + esc(F.l || '') + '" style="margin-bottom:8px">' +
+      '<div class="acts" style="margin:0"><button data-act="feat-set">⭐ Поставить</button>' + (F.id ? '<button class="red" data-act="feat-del">Сбросить</button>' : '') + '</div></div>' +
+      '<h2>📌 Баннер на главной</h2><div class="row" style="display:block"><p class="note" style="margin-top:0">Полоска под счётчиком онлайна на главной. Если выбрать игру — нажатие сразу её запустит.</p>' +
+      '<input id="bt" placeholder="Текст баннера" maxlength="120" value="' + esc(B.text || '') + '" style="margin-bottom:8px"><div class="grid2" style="margin:0 0 8px"><select id="bg2">' + opts(B.game) + '</select>' +
+      '<select id="bc">' + [['#7c5cff', '🟣 Фиолетовый'], ['#ef4444', '🔴 Красный'], ['#f59e0b', '🟠 Оранжевый'], ['#16a34a', '🟢 Зелёный'], ['#0ea5e9', '🔵 Голубой'], ['#ec4899', '🩷 Розовый']].map(function (c) { return '<option value="' + c[0] + '"' + (c[0] === B.col ? ' selected' : '') + '>' + c[1] + '</option>'; }).join('') + '</select></div>' +
+      '<div class="acts" style="margin:0"><button data-act="ban-set">📌 Показать</button>' + (B.text ? '<button class="red" data-act="ban-del">Убрать</button>' : '') + '</div></div>' +
+      '<h2>🎁 Награды за вход (7 дней)</h2><div class="row" style="display:block"><p class="note" style="margin-top:0">Сколько монет получает игрок за 1-й … 7-й день входа подряд.</p>' +
+      '<div class="grid2" style="grid-template-columns:repeat(4,1fr);margin:0 0 8px">' + DR.map(function (x, i) { return '<input type="number" class="dr" min="0" max="5000" value="' + (+x || 0) + '" placeholder="День ' + (i + 1) + '" title="День ' + (i + 1) + '">'; }).join('') + '</div>' +
+      '<button data-act="daily-set" style="width:100%">💾 Сохранить награды</button></div>' +
+      '<h2>🙈 Скрытые игры (' + nh + ')</h2><p class="note">Скрытая игра пропадает из меню у всех игроков (например, если в ней нашли ошибку). Нажми, чтобы скрыть или вернуть.</p>' +
+      '<div class="gl">' + GL.map(function (g) { var off = !!HID[g.id]; return '<button class="gch' + (off ? ' off' : '') + '" data-act="g-tog" data-id="' + g.id + '" style="--a:' + (g.col && g.col[0]) + '">' + (off ? '🙈 ' : '') + esc(g.t) + '</button>'; }).join('') + '</div>';
   } else if (tab === 'stats') {
     var today = new Date().toLocaleDateString('ru-RU'), plays = 0, coins = 0, lv = {}, games = {}, days = [];
     P.forEach(function (p) { var pr = p.pr || {}; plays += +pr.pl || 0; coins += +pr.co || 0; });
@@ -512,7 +538,15 @@ document.addEventListener('click', function (e) {
     act(req('PUT', '/app/news', { id: Date.now(), title: $('#nt').value.trim().slice(0, 60), text: tx.slice(0, 500), t: { '.sv': 'timestamp' } }), 'Объявление отправлено');
   }
   else if (a === 'news-del') act(req('DELETE', '/app/news'), 'Объявление убрано');
-  else if (a === 'ev-start') act(req('PUT', '/app/event', { mul: +$('#em').value, until: Date.now() + (+$('#eh').value) * 3600000, title: $('#et').value.trim().slice(0, 40) || 'Событие' }), 'Событие запущено');
+  else if (a === 'ev-start') { var ew = $('#ew').value; act(req('PUT', '/app/event', { mul: ew.indexOf('c') >= 0 ? +$('#em').value : 1, xp: ew.indexOf('x') >= 0 ? +$('#em').value : 1, until: Date.now() + (+$('#eh').value) * 3600000, title: $('#et').value.trim().slice(0, 40) || 'Событие' }), 'Событие запущено'); }
+  else if (a === 'feat-set') { var fg = $('#fg').value; if (!fg) { toast('Выбери игру'); return; } act(req('PUT', '/app/featured', { id: fg, l: $('#fl').value.trim().slice(0, 40) }), '⭐ Игра дня: ' + gTitle(fg)); }
+  else if (a === 'feat-del') act(req('DELETE', '/app/featured'), 'Игра дня сброшена');
+  else if (a === 'ban-set') { var bt = $('#bt').value.trim(); if (!bt) { toast('Напиши текст баннера'); return; } act(req('PUT', '/app/banner', { text: bt.slice(0, 120), game: $('#bg2').value || '', col: $('#bc').value }), 'Баннер показан'); }
+  else if (a === 'ban-del') act(req('DELETE', '/app/banner'), 'Баннер убран');
+  else if (a === 'daily-set') { var dr = [].map.call(document.querySelectorAll('.dr'), function (x) { return Math.max(0, Math.min(5000, Math.round(+x.value || 0))); }); act(req('PUT', '/app/daily', dr), 'Награды за вход сохранены'); }
+  else if (a === 'g-tog') { var hid = !((D.app || {}).hidden || {})[id]; act(req(hid ? 'PUT' : 'DELETE', '/app/hidden/' + id, hid ? true : undefined), (hid ? '🙈 Скрыта: ' : '👁 Возвращена: ') + gTitle(id)); }
+  else if (a === 'qr-add') { var qt = ($('#cr') && $('#cr').value.trim()) || ''; if (!qt) { toast('Напиши текст в поле ответа — он станет шаблоном'); return; } var ql = qrList(); if (ql.indexOf(qt) < 0) ql.push(qt.slice(0, 200)); ls('adm_qr', ql); toast('Шаблон сохранён'); render(); }
+  else if (a === 'qr-edit') { var ql2 = qrList(), tx2 = prompt('Шаблоны ответов, каждый с новой строки:', ql2.join('\n')); if (tx2 != null) { ls('adm_qr', tx2.split('\n').map(function (x) { return x.trim(); }).filter(Boolean).slice(0, 20)); render(); } }
   else if (a === 'ev-stop') act(req('DELETE', '/app/event'), 'Событие остановлено');
   else if (a === 'maint-on') {
     if (Date.now() - (window.mtAsk || 0) > 4000) { window.mtAsk = Date.now(); toast('⚠️ Нажми ещё раз: все игроки потеряют доступ к игре'); return; }
