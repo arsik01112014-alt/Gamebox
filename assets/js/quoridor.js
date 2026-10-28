@@ -144,7 +144,7 @@ window.GAMES.quoridor = {
         }
         for (var k in walls) {
           var o = Math.floor(k / 100) * 100, rem = k - o, wr = wallRect(o, Math.floor(rem / 10), rem % 10);
-          K.rr(c, wr[0], wr[1], wr[2], wr[3], 3); c.fillStyle = +k === lastW ? '#fde047' : '#f59e0b'; c.fill();
+          c.fillStyle = 'rgba(0,0,0,.35)'; K.rr(c, wr[0] + 2, wr[1] + 3, wr[2], wr[3], 3); c.fill(); var wg = c.createLinearGradient(wr[0], wr[1], wr[0] + wr[2], wr[1] + wr[3]); wg.addColorStop(0, +k === lastW ? '#fef08a' : '#fbbf24'); wg.addColorStop(1, +k === lastW ? '#eab308' : '#b45309'); K.rr(c, wr[0], wr[1], wr[2], wr[3], 3); c.fillStyle = wg; c.fill();
         }
         if (pend) { var pr = wallRect(pend[0], pend[1], pend[2]); K.rr(c, pr[0], pr[1], pr[2], pr[3], 3); c.fillStyle = 'rgba(253,224,71,' + (0.5 + 0.4 * Math.sin(t * 8)) + ')'; c.fill(); }
         pw.forEach(function (q, i) {

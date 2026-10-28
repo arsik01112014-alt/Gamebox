@@ -52,24 +52,36 @@ window.GAMES.swing = {
       draw: function (c) {
         var W = api.W, H = api.H, g = c.createLinearGradient(0, 0, 0, H);
         g.addColorStop(0, '#0c4a6e'); g.addColorStop(1, '#7dd3fc'); c.fillStyle = g; c.fillRect(0, 0, W, H);
-        // дальние небоскрёбы
+        // луна, облака и два слоя небоскрёбов с окнами
+        c.fillStyle = 'rgba(254,249,195,.9)'; c.beginPath(); c.arc(W * 0.8, 80, 30, 0, 6.283); c.fill();
+        c.fillStyle = 'rgba(12,74,110,.9)'; c.beginPath(); c.arc(W * 0.8 + 12, 72, 26, 0, 6.283); c.fill();
+        for (var cl = 0; cl < 4; cl++) { var cx2 = ((cl * 230 - camX * 0.1) % (W + 300) + W + 300) % (W + 300) - 150; c.fillStyle = 'rgba(255,255,255,.08)'; c.beginPath(); c.ellipse(cx2, 140 + cl * 40, 70, 16, 0, 0, 6.283); c.ellipse(cx2 + 40, 132 + cl * 40, 40, 14, 0, 0, 6.283); c.fill(); }
         for (var layer = 0; layer < 2; layer++) {
-          var k = layer ? 0.5 : 0.25, col = layer ? '#1e3a5f' : '#2b4d74', bw = layer ? 70 : 50;
-          c.fillStyle = col;
+          var k = layer ? 0.5 : 0.25, col = layer ? '#13294a' : '#1f3e66', bw = layer ? 74 : 54;
           var start = Math.floor(camX * k / bw) - 1;
-          for (var i = start; i < start + W / bw + 3; i++) { var hh = 120 + ((i * 7919) % 11) * (layer ? 26 : 18); c.fillRect(i * bw - camX * k, H - hh, bw - 6, hh); }
+          for (var i = start; i < start + W / bw + 3; i++) {
+            var hh = 120 + ((i * 7919) % 11) * (layer ? 26 : 18), bx = i * bw - camX * k;
+            c.fillStyle = col; c.fillRect(bx, H - hh, bw - 6, hh);
+            if (layer) { c.fillStyle = col; c.fillRect(bx + bw / 2 - 5, H - hh - 14, 3, 14); }
+            if (layer) for (var wy = H - hh + 10; wy < H - 30; wy += 16) for (var wx = bx + 7; wx < bx + bw - 14; wx += 12) {
+              var lit = ((i * 31 + wy * 7 + wx) | 0) % 5 === 0; c.fillStyle = lit ? (layer ? 'rgba(253,224,71,.75)' : 'rgba(253,224,71,.35)') : 'rgba(255,255,255,.04)'; c.fillRect(wx, wy, 5, 7);
+            }
+          }
         }
         c.fillStyle = '#0f172a'; c.fillRect(0, H - 24, W, 24);
         c.save(); c.translate(-camX, 0);
-        anchors.forEach(function (a) { c.fillStyle = '#fde68a'; c.beginPath(); c.arc(a.x, a.y, 7, 0, 6.283); c.fill(); c.strokeStyle = 'rgba(253,230,138,.3)'; c.lineWidth = 6; c.beginPath(); c.arc(a.x, a.y, 12, 0, 6.283); c.stroke(); });
+        anchors.forEach(function (a) { var on = rope && rope.a === a, gl = c.createRadialGradient(a.x, a.y, 2, a.x, a.y, on ? 26 : 18); gl.addColorStop(0, 'rgba(253,230,138,.7)'); gl.addColorStop(1, 'rgba(253,230,138,0)'); c.fillStyle = gl; c.beginPath(); c.arc(a.x, a.y, on ? 26 : 18, 0, 6.283); c.fill(); c.fillStyle = '#fde68a'; c.beginPath(); c.arc(a.x, a.y, 6, 0, 6.283); c.fill(); c.strokeStyle = '#92400e'; c.lineWidth = 2; c.stroke(); });
         stars.forEach(function (st) { if (st.got) return; c.font = '24px system-ui'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('⭐', st.x, st.y + Math.sin(t * 4 + st.x) * 4); });
-        if (rope) { c.strokeStyle = '#f8fafc'; c.lineWidth = 2.5; c.beginPath(); c.moveTo(rope.a.x, rope.a.y); c.lineTo(p.x, p.y); c.stroke(); }
+        if (rope) { c.strokeStyle = 'rgba(248,250,252,.25)'; c.lineWidth = 6; c.beginPath(); c.moveTo(rope.a.x, rope.a.y); c.lineTo(p.x, p.y); c.stroke(); c.strokeStyle = '#f8fafc'; c.lineWidth = 2; c.stroke(); }
         trail.forEach(function (q, i) { c.fillStyle = 'rgba(255,255,255,' + i / trail.length * 0.35 + ')'; c.beginPath(); c.arc(q[0], q[1], 3 + i / 5, 0, 6.283); c.fill(); });
         var ang = Math.atan2(p.vy, p.vx);
         c.save(); c.translate(p.x, p.y); c.rotate(ang * 0.3);
-        c.fillStyle = '#dc2626'; c.beginPath(); c.arc(0, 0, 14, 0, 6.283); c.fill();
-        c.strokeStyle = '#7f1d1d'; c.lineWidth = 1; c.beginPath(); c.moveTo(-14, 0); c.lineTo(14, 0); c.moveTo(0, -14); c.lineTo(0, 14); c.stroke();
-        c.fillStyle = '#fff'; c.beginPath(); c.ellipse(-5, -3, 4, 5.5, -0.3, 0, 6.283); c.ellipse(5, -3, 4, 5.5, 0.3, 0, 6.283); c.fill();
+        c.strokeStyle = '#1e3a8a'; c.lineWidth = 3; c.lineCap = 'round'; var lg = Math.sin(t * 14) * 3;
+        [[-1, 1], [1, 1], [-1, -1], [1, -1]].forEach(function (q) { c.beginPath(); c.moveTo(q[0] * 8, q[1] * 6); c.quadraticCurveTo(q[0] * 18, q[1] * (4 + lg), q[0] * 20, q[1] * 14); c.stroke(); });
+        var bgS = c.createRadialGradient(-4, -5, 2, 0, 0, 15); bgS.addColorStop(0, '#f87171'); bgS.addColorStop(1, '#b91c1c'); c.fillStyle = bgS; c.beginPath(); c.arc(0, 0, 14, 0, 6.283); c.fill();
+        c.strokeStyle = '#7f1d1d'; c.lineWidth = 0.8; for (var wq = 0; wq < 4; wq++) { c.beginPath(); c.moveTo(0, 0); c.lineTo(Math.cos(wq * 0.785) * 14, Math.sin(wq * 0.785) * 14); c.moveTo(0, 0); c.lineTo(-Math.cos(wq * 0.785) * 14, -Math.sin(wq * 0.785) * 14); c.stroke(); }
+        c.beginPath(); c.arc(0, 0, 7, 0, 6.283); c.stroke();
+        c.fillStyle = '#fff'; c.strokeStyle = '#111'; c.lineWidth = 1.5; c.beginPath(); c.ellipse(-5, -3, 4, 5.5, -0.4, 0, 6.283); c.fill(); c.stroke(); c.beginPath(); c.ellipse(5, -3, 4, 5.5, 0.4, 0, 6.283); c.fill(); c.stroke();
         c.restore(); c.restore();
         c.fillStyle = '#fff'; c.font = '800 15px system-ui'; c.textAlign = 'center'; c.fillText(Math.floor(maxX / 20) + ' м' + (bonus > 0 ? '  +10 ⭐' : ''), W / 2, 30);
         if (t < 3) { c.font = '700 14px system-ui'; c.fillText('Держи палец — паутина, отпусти — полёт', W / 2, H - 60); }

@@ -39,14 +39,17 @@ window.GAMES.hanoi = {
         g.addColorStop(0, '#fef3c7'); g.addColorStop(1, '#fde68a'); c.fillStyle = g; c.fillRect(0, 0, W, H);
         c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillStyle = '#78350f'; c.font = '800 15px system-ui';
         c.fillText('Уровень ' + Math.min(3, lvl + (winT > 0 ? 0 : 1)) + ' из 3 · ходов ' + moves + ' (минимум ' + (Math.pow(2, n) - 1) + ')', W / 2, 30);
-        window.GBK.rr(c, 8, by, W - 16, 16, 8); c.fillStyle = '#92400e'; c.fill();
+        c.fillStyle = 'rgba(120,53,15,.12)'; c.beginPath(); c.ellipse(W / 2, by + 30, W * 0.48, 16, 0, 0, 6.283); c.fill();
+        var wg = c.createLinearGradient(0, by, 0, by + 22); wg.addColorStop(0, '#b45309'); wg.addColorStop(1, '#78350f'); window.GBK.rr(c, 8, by, W - 16, 22, 9); c.fillStyle = wg; c.fill();
+        c.strokeStyle = 'rgba(0,0,0,.12)'; c.lineWidth = 1; for (var gl2 = 0; gl2 < 4; gl2++) { c.beginPath(); c.moveTo(16, by + 5 + gl2 * 4); c.bezierCurveTo(W * 0.3, by + 3 + gl2 * 4, W * 0.6, by + 8 + gl2 * 4, W - 16, by + 5 + gl2 * 4); c.stroke(); }
         for (var p = 0; p < 3; p++) {
-          var x = pegX(p); window.GBK.rr(c, x - 5, by - h * (n + 1.5), 10, h * (n + 1.5), 5); c.fillStyle = p === 2 ? '#b45309' : '#a16207'; c.fill();
+          var x = pegX(p), pg2 = c.createLinearGradient(x - 6, 0, x + 6, 0); pg2.addColorStop(0, '#78350f'); pg2.addColorStop(0.4, '#d97706'); pg2.addColorStop(1, '#78350f'); window.GBK.rr(c, x - 6, by - h * (n + 1.5), 12, h * (n + 1.5), 6); c.fillStyle = pg2; c.fill(); c.fillStyle = '#fbbf24'; c.beginPath(); c.arc(x, by - h * (n + 1.5), 7, 0, 6.283); c.fill();
+          if (p === 2) { c.fillStyle = 'rgba(34,197,94,' + (0.15 + 0.1 * Math.sin(t * 3)) + ')'; c.beginPath(); c.ellipse(x, by, W * 0.15, 10, 0, 0, 6.283); c.fill(); }
           if (p === 2) { c.fillStyle = '#92400e'; c.font = '700 12px system-ui'; c.fillText('сюда', x, by + 30); }
           pegs[p].forEach(function (s, k) {
             var w = dw(s), y = by - (k + 1) * h; window.GBK.rr(c, x - w / 2, y + 1, w, h - 2, (h - 2) / 2);
             var dg = c.createLinearGradient(0, y, 0, y + h); dg.addColorStop(0, '#fff'); dg.addColorStop(0.15, COLS[(s - 1) % 9]); dg.addColorStop(1, COLS[(s - 1) % 9]);
-            c.fillStyle = dg; c.fill();
+            c.fillStyle = dg; c.fill(); c.fillStyle = 'rgba(0,0,0,.18)'; window.GBK.rr(c, x - w / 2 + 4, y + h - 6, w - 8, 4, 2); c.fill(); c.fillStyle = 'rgba(255,255,255,.35)'; window.GBK.rr(c, x - w / 2 + 8, y + 4, w * 0.35, 3, 2); c.fill();
           });
         }
         if (held) {

@@ -83,7 +83,8 @@ window.GAMES.ultimate = {
           for (var q = 1; q < 3; q++) { c.beginPath(); c.moveTo(gx + q * cs, gy + 8); c.lineTo(gx + q * cs, gy + cs * 3 - 8); c.moveTo(gx + 8, gy + q * cs); c.lineTo(gx + cs * 3 - 8, gy + q * cs); c.stroke(); }
         }
         for (var i = 0; i < 81; i++) if (b[i]) { var p = cellXY(i); mark(c, b[i], p[0], p[1], cs, big[Math.floor(i / 9)] ? 0.35 : 1); if (i === last) { c.fillStyle = 'rgba(253,230,138,.3)'; c.fillRect(p[0] + 2, p[1] + 2, cs - 4, cs - 4); } }
-        for (g = 0; g < 9; g++) if (big[g] === 1 || big[g] === 2) mark(c, big[g], ox + (g % 3) * 3 * cs, oy + Math.floor(g / 3) * 3 * cs, cs * 3);
+        for (g = 0; g < 9; g++) if (big[g] === 1 || big[g] === 2) { var bx3 = ox + (g % 3) * 3 * cs, by3 = oy + Math.floor(g / 3) * 3 * cs; K.rr(c, bx3 + 4, by3 + 4, cs * 3 - 8, cs * 3 - 8, 10); c.fillStyle = big[g] === 1 ? 'rgba(248,113,113,.16)' : 'rgba(96,165,250,.16)'; c.fill(); c.save(); c.shadowColor = big[g] === 1 ? '#f87171' : '#60a5fa'; c.shadowBlur = 16; mark(c, big[g], bx3, by3, cs * 3); c.restore(); }
+        for (g = 0; g < 9; g++) if (big[g] === 3) { c.fillStyle = 'rgba(148,163,184,.18)'; K.rr(c, ox + (g % 3) * 3 * cs + 4, oy + Math.floor(g / 3) * 3 * cs + 4, cs * 3 - 8, cs * 3 - 8, 10); c.fill(); }
         c.strokeStyle = '#a5b4fc'; c.lineWidth = 3;
         for (q = 1; q < 3; q++) { c.beginPath(); c.moveTo(ox + q * 3 * cs, oy); c.lineTo(ox + q * 3 * cs, oy + 9 * cs); c.moveTo(ox, oy + q * 3 * cs); c.lineTo(ox + 9 * cs, oy + q * 3 * cs); c.stroke(); }
         var tip;

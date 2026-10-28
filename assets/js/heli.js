@@ -54,6 +54,15 @@ window.GAMES.heli = {
         c.fillStyle = rock;
         c.beginPath(); c.moveTo(-10, 0); cols.forEach(function (col) { c.lineTo(col.x - scroll, col.top); }); c.lineTo(W + 20, 0); c.closePath(); c.fill();
         c.beginPath(); c.moveTo(-10, H); cols.forEach(function (col) { c.lineTo(col.x - scroll, col.bot); }); c.lineTo(W + 20, H); c.closePath(); c.fill();
+        // прожилки и кристаллы на стенах
+        cols.forEach(function (col, i) {
+          if (i % 9) return; var x = col.x - scroll;
+          c.fillStyle = 'rgba(0,0,0,.18)'; c.beginPath(); c.arc(x, col.top - 18, 7, 0, 6.283); c.arc(x + 20, col.bot + 22, 9, 0, 6.283); c.fill();
+          if (i % 27 === 0) { c.fillStyle = 'rgba(103,232,249,.75)'; c.beginPath(); c.moveTo(x, col.bot + 2); c.lineTo(x + 5, col.bot - 12); c.lineTo(x + 10, col.bot + 2); c.fill(); c.fillStyle = 'rgba(103,232,249,.25)'; c.beginPath(); c.arc(x + 5, col.bot - 4, 14, 0, 6.283); c.fill(); }
+        });
+        c.strokeStyle = 'rgba(253,186,116,.35)'; c.lineWidth = 2;
+        c.beginPath(); cols.forEach(function (col, i) { if (i) c.lineTo(col.x - scroll, col.top); else c.moveTo(col.x - scroll, col.top); }); c.stroke();
+        c.beginPath(); cols.forEach(function (col, i) { if (i) c.lineTo(col.x - scroll, col.bot); else c.moveTo(col.x - scroll, col.bot); }); c.stroke();
         c.fillStyle = '#92400e';
         cols.forEach(function (col) {
           if (!col.stal) return; var x = col.x - scroll;
@@ -61,6 +70,8 @@ window.GAMES.heli = {
         });
         items.forEach(function (it) { if (it.got) return; c.font = '24px system-ui'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('⛽', it.x - scroll, it.y + Math.sin(t * 4 + it.x) * 4); });
         smoke.forEach(function (s) { c.fillStyle = 'rgba(226,232,240,' + s.l * 0.4 + ')'; c.beginPath(); c.arc(s.x, s.y, 8 * (1.2 - s.l), 0, 6.283); c.fill(); });
+        // луч прожектора
+        var lb = c.createLinearGradient(P.x, P.y, P.x + 180, P.y); lb.addColorStop(0, 'rgba(254,249,195,.28)'); lb.addColorStop(1, 'rgba(254,249,195,0)'); c.fillStyle = lb; c.beginPath(); c.moveTo(P.x + 14, P.y + 2); c.lineTo(P.x + 190, P.y - 40); c.lineTo(P.x + 190, P.y + 50); c.fill();
         // вертолёт
         c.save(); c.translate(P.x, P.y); c.rotate(Math.max(-0.3, Math.min(0.3, P.vy / 900)) + (dead ? deadT * 6 : 0));
         c.fillStyle = '#facc15'; c.beginPath(); c.ellipse(0, 0, 20, 12, 0, 0, 6.283); c.fill();

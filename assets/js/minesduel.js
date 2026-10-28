@@ -7,14 +7,14 @@ window.GAMES.minesduel = {
   colors: ['#0d9488', '#134e4a'], controls: 'none',
   icon: '<svg viewBox="0 0 100 100"><rect x="6" y="6" width="88" height="88" rx="14" fill="#134e4a"/><g fill="#2dd4bf"><rect x="14" y="14" width="22" height="22" rx="4"/><rect x="64" y="64" width="22" height="22" rx="4"/><rect x="14" y="64" width="22" height="22" rx="4"/></g><g fill="#ccfbf1"><rect x="39" y="14" width="22" height="22" rx="4"/><rect x="39" y="39" width="22" height="22" rx="4"/><rect x="64" y="14" width="22" height="22" rx="4"/></g><circle cx="25" cy="50" r="8" fill="#ef4444"/><circle cx="75" cy="50" r="8" fill="#3b82f6"/><text x="46" y="31" font-family="sans-serif" font-weight="900" font-size="14" fill="#0f766e">2</text></svg>',
   create: function (api) {
-    var K = window.GBK, W0 = 10, H0 = 12, M = 25, mine, open, owner, num, turn, found, netQ, endT, t, thinkT, over, last, cs, ox, oy, phase, rdyT, seed;
+    var openT, K = window.GBK, W0 = 10, H0 = 12, M = 25, mine, open, owner, num, turn, found, netQ, endT, t, thinkT, over, last, cs, ox, oy, phase, rdyT, seed;
     function names() { return api.mode === 1 ? [api.t('g.p1'), api.t('g.p2')] : api.mode === 2 ? (api.net.side === 0 ? [api.t('g.you'), api.t('net.opp')] : [api.t('net.opp'), api.t('g.you')]) : [api.t('g.you'), api.t('g.cpu')]; }
     function me() { return api.mode === 2 ? api.net.side + 1 : 1; }
     function myTurn() { return phase === 'play' && !over && (api.mode === 1 || (api.mode === 2 ? turn === me() : turn === 1)); }
     function rng(s) { return function () { s |= 0; s = s + 0x6D2B79F5 | 0; var x = Math.imul(s ^ s >>> 15, 1 | s); x = x + Math.imul(x ^ x >>> 7, 61 | x) ^ x; return ((x ^ x >>> 14) >>> 0) / 4294967296; }; }
     function nbs(i) { var r = Math.floor(i / W0), c = i % W0, a = []; for (var dr = -1; dr <= 1; dr++) for (var dc = -1; dc <= 1; dc++) { if (!dr && !dc) continue; var nr = r + dr, nc = c + dc; if (nr >= 0 && nc >= 0 && nr < H0 && nc < W0) a.push(nr * W0 + nc); } return a; }
     function build(s) {
-      seed = s; var R = rng(s), n = W0 * H0; mine = new Array(n).fill(0); open = new Array(n).fill(0); owner = new Array(n).fill(0); num = [];
+      seed = s; var R = rng(s), n = W0 * H0; mine = new Array(n).fill(0); open = new Array(n).fill(0); openT = new Array(n).fill(0); owner = new Array(n).fill(0); num = [];
       var k = 0; while (k < M) { var i = Math.floor(R() * n); if (!mine[i]) { mine[i] = 1; k++; } }
       for (var j = 0; j < n; j++) num.push(nbs(j).filter(function (v) { return mine[v]; }).length);
       turn = 1; found = [0, 0]; over = 0; last = -1; thinkT = 0.8; phase = 'play'; layout();
@@ -70,7 +70,7 @@ window.GAMES.minesduel = {
         reveal(r * W0 + c);
       },
       update: function (dt) {
-        t += dt;
+        t += dt; if (openT) for (var oi = 0; oi < openT.length; oi++) if (open[oi] && openT[oi] < 1) openT[oi] = Math.min(1, openT[oi] + dt * 5);
         if (phase === 'sync') { rdyT -= dt; if (rdyT <= 0) { rdyT = 1; api.net.send({ k: 'rdy' }); } return; }
         if (endT > 0) { endT -= dt; if (endT <= 0) api.gameOver(); return; }
         if (over) return;
@@ -80,19 +80,29 @@ window.GAMES.minesduel = {
       draw: function (c) {
         var W = api.W, H = api.H, nm = names(), COL = ['#ef4444', '#3b82f6'];
         K.bg(c, W, H, '#134e4a', '#042f2e', 'rgba(45,212,191,.12)');
+        if (mine && phase !== 'sync') { c.save(); c.shadowColor = 'rgba(0,0,0,.5)'; c.shadowBlur = 20; c.shadowOffsetY = 8; K.rr(c, ox - 8, oy - 8, cs * W0 + 16, cs * H0 + 16, 16); c.fillStyle = '#115e59'; c.fill(); c.restore(); }
         c.textAlign = 'center'; c.textBaseline = 'middle';
         if (phase === 'sync') { K.toast(c, W, H / 2, 'Соединение…', 1); return; }
         [0, 1].forEach(function (p) { var x = p ? W * 0.75 : W * 0.25, act = !over && turn === p + 1; c.fillStyle = act ? '#fde68a' : COL[p]; c.font = '800 15px system-ui'; c.fillText((act ? '▶ ' : '') + nm[p], x, 28); c.font = '900 20px system-ui'; c.fillStyle = '#fff'; c.fillText('💣 ' + found[p], x, 54); });
         var NC = ['', '#2563eb', '#16a34a', '#dc2626', '#7c3aed', '#b45309', '#0891b2', '#111', '#666'];
         for (var i = 0; i < W0 * H0; i++) {
           var x = ox + (i % W0) * cs, y = oy + Math.floor(i / W0) * cs;
-          if (!open[i]) { K.rr(c, x + 1, y + 1, cs - 2, cs - 2, cs * 0.18); c.fillStyle = (Math.floor(i / W0) + i) % 2 ? '#2dd4bf' : '#14b8a6'; c.fill(); continue; }
-          K.rr(c, x + 1, y + 1, cs - 2, cs - 2, cs * 0.18); c.fillStyle = '#ccfbf1'; c.fill();
+          if (!open[i]) {
+            K.rr(c, x + 1, y + 3, cs - 2, cs - 3, cs * 0.18); c.fillStyle = '#0f766e'; c.fill();
+            var tg = c.createLinearGradient(x, y, x, y + cs); tg.addColorStop(0, (Math.floor(i / W0) + i) % 2 ? '#5eead4' : '#2dd4bf'); tg.addColorStop(1, (Math.floor(i / W0) + i) % 2 ? '#2dd4bf' : '#14b8a6');
+            K.rr(c, x + 1, y + 1, cs - 2, cs - 4, cs * 0.18); c.fillStyle = tg; c.fill(); c.fillStyle = 'rgba(255,255,255,.25)'; K.rr(c, x + 4, y + 3, cs - 8, cs * 0.12, 3); c.fill();
+            if (myTurn()) { c.fillStyle = 'rgba(255,255,255,' + (0.04 + 0.04 * Math.sin(t * 3 + i * 0.3)) + ')'; K.rr(c, x + 1, y + 1, cs - 2, cs - 4, cs * 0.18); c.fill(); }
+            continue;
+          }
+          var ot = openT ? openT[i] : 1, sc2 = 0.7 + 0.3 * ot;
+          c.save(); c.translate(x + cs / 2, y + cs / 2); c.scale(sc2, sc2); c.translate(-x - cs / 2, -y - cs / 2);
+          K.rr(c, x + 1, y + 1, cs - 2, cs - 2, cs * 0.18); c.fillStyle = mine[i] ? (owner[i] === 1 ? '#fecaca' : '#bfdbfe') : '#e6fffb'; c.fill();
           if (mine[i]) {
             c.fillStyle = COL[owner[i] - 1]; c.beginPath(); c.arc(x + cs / 2, y + cs / 2, cs * 0.3, 0, 6.283); c.fill();
             c.fillStyle = '#fff'; c.font = Math.round(cs * 0.4) + 'px system-ui'; c.fillText('💣', x + cs / 2, y + cs / 2 + 1);
           } else if (num[i]) { c.fillStyle = NC[num[i]]; c.font = '900 ' + Math.round(cs * 0.55) + 'px system-ui'; c.fillText(num[i], x + cs / 2, y + cs / 2 + 1); }
-          if (i === last) { c.strokeStyle = '#fde68a'; c.lineWidth = 2.5; c.strokeRect(x + 2, y + 2, cs - 4, cs - 4); }
+          c.restore();
+          if (i === last) { c.strokeStyle = '#fde68a'; c.lineWidth = 2.5; K.rr(c, x + 2, y + 2, cs - 4, cs - 4, cs * 0.16); c.stroke(); }
         }
         var tip;
         if (over) tip = api.mode === 1 ? api.t(over === 1 ? 'g.p1win' : 'g.p2win') : over === me() ? api.t('g.win') : api.t('g.lose');

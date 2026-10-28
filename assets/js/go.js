@@ -96,7 +96,13 @@ window.GAMES.go = {
           c.fillStyle = '#a8a29e'; c.font = '700 12px system-ui'; c.fillText('взято: ' + caps[p], x, 54);
         });
         var bx = ox - cs / 2 - 6, by = oy - cs / 2 - 6, bw = cs * N + 12;
+        c.save(); c.shadowColor = 'rgba(0,0,0,.55)'; c.shadowBlur = 24; c.shadowOffsetY = 10; K.rr(c, bx - 8, by - 8, bw + 16, bw + 16, 16); c.fillStyle = '#a16207'; c.fill(); c.restore();
         K.rr(c, bx, by, bw, bw, 12); var g = c.createLinearGradient(bx, by, bx + bw, by + bw); g.addColorStop(0, '#f2c46d'); g.addColorStop(1, '#d9a441'); c.fillStyle = g; c.fill();
+        c.save(); K.rr(c, bx, by, bw, bw, 12); c.clip(); c.strokeStyle = 'rgba(146,64,14,.13)'; c.lineWidth = 1.2;
+        for (var gr = 0; gr < 22; gr++) { var gy0 = by + gr * bw / 22; c.beginPath(); c.moveTo(bx, gy0); c.bezierCurveTo(bx + bw * 0.3, gy0 + Math.sin(gr) * 6, bx + bw * 0.7, gy0 - Math.cos(gr * 1.3) * 6, bx + bw, gy0 + Math.sin(gr * 0.7) * 4); c.stroke(); }
+        c.restore();
+        c.fillStyle = 'rgba(107,66,17,.7)'; c.font = '700 ' + Math.round(cs * 0.26) + 'px system-ui';
+        for (var lb = 0; lb < N; lb++) { c.fillText('ABCDEFGHJ'[lb], ox + lb * cs, by + 4 + cs * 0.12); c.fillText(N - lb, bx + 4 + cs * 0.1, oy + lb * cs); }
         c.strokeStyle = '#6b4211'; c.lineWidth = 1.3;
         for (var k = 0; k < N; k++) { c.beginPath(); c.moveTo(ox, oy + k * cs); c.lineTo(ox + (N - 1) * cs, oy + k * cs); c.moveTo(ox + k * cs, oy); c.lineTo(ox + k * cs, oy + (N - 1) * cs); c.stroke(); }
         [[2, 2], [2, 6], [6, 2], [6, 6], [4, 4]].forEach(function (q) { c.fillStyle = '#6b4211'; c.beginPath(); c.arc(ox + q[1] * cs, oy + q[0] * cs, 3.5, 0, 6.283); c.fill(); });

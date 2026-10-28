@@ -81,9 +81,11 @@ window.GAMES.zuma = {
       draw: function (c) {
         var W = api.W, H = api.H, g = c.createRadialGradient(cx, cy, 20, cx, cy, Math.max(W, H) * 0.7);
         g.addColorStop(0, '#ca8a04'); g.addColorStop(1, '#422006'); c.fillStyle = g; c.fillRect(0, 0, W, H);
+        c.strokeStyle = 'rgba(66,32,6,.25)'; c.lineWidth = 2; for (var ty = 0; ty < H; ty += 44) { c.beginPath(); c.moveTo(0, ty); c.lineTo(W, ty); c.stroke(); for (var tx = (ty / 44) % 2 ? 0 : 33; tx < W; tx += 66) { c.beginPath(); c.moveTo(tx, ty); c.lineTo(tx, ty + 44); c.stroke(); } }
+        c.fillStyle = 'rgba(253,230,138,.06)'; c.beginPath(); c.arc(cx, cy, 70, 0, 6.283); c.fill();
         // жёлоб
         c.lineCap = 'round'; c.lineJoin = 'round';
-        [[D * 1.25, '#3f2a06'], [D * 0.95, '#6b4a12']].forEach(function (l) { c.strokeStyle = l[1]; c.lineWidth = l[0]; c.beginPath(); for (var i = 1; i < path.length; i += 6) c.lineTo(path[i][0], path[i][1]); c.stroke(); });
+        [[D * 1.45, 'rgba(0,0,0,.25)'], [D * 1.25, '#3f2a06'], [D * 1.05, '#7c5414'], [D * 0.95, '#5b3c0e']].forEach(function (l) { c.strokeStyle = l[1]; c.lineWidth = l[0]; c.beginPath(); for (var i = 1; i < path.length; i += 6) c.lineTo(path[i][0], path[i][1]); c.stroke(); });
         // череп в конце
         var e = path[path.length - 1]; c.fillStyle = '#0c0a09'; c.beginPath(); c.arc(e[0], e[1], D * 0.9, 0, 6.283); c.fill(); c.font = Math.round(D * 1.1) + 'px system-ui'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('💀', e[0], e[1] + 1);
         var danger = headS / plen > 0.8 && !over;
@@ -91,6 +93,7 @@ window.GAMES.zuma = {
           var p = at(headS - i * D); if (headS - i * D < 0) return; var r = D * 0.48;
           var bg = c.createRadialGradient(p[0] - r * 0.35, p[1] - r * 0.4, 1, p[0], p[1], r); bg.addColorStop(0, '#fff'); bg.addColorStop(0.25, PAL[b.c]); bg.addColorStop(1, PAL[b.c]);
           c.fillStyle = bg; c.beginPath(); c.arc(p[0], p[1], r, 0, 6.283); c.fill();
+          var rollA = (headS - i * D) / r; c.save(); c.beginPath(); c.arc(p[0], p[1], r, 0, 6.283); c.clip(); c.strokeStyle = 'rgba(255,255,255,.35)'; c.lineWidth = r * 0.3; c.beginPath(); c.ellipse(p[0], p[1], Math.abs(Math.cos(rollA)) * r * 0.8, r, 0, 0, 6.283); c.stroke(); c.restore();
         });
         if (danger) { c.fillStyle = 'rgba(239,68,68,' + (0.1 + 0.08 * Math.sin(t * 10)) + ')'; c.fillRect(0, 0, W, H); }
         pops.forEach(function (q) { c.globalAlpha = q.l / 0.4; c.strokeStyle = q.c; c.lineWidth = 3; c.beginPath(); c.arc(q.x, q.y, D * (1.2 - q.l), 0, 6.283); c.stroke(); }); c.globalAlpha = 1;
@@ -98,7 +101,8 @@ window.GAMES.zuma = {
         // лягушка
         c.save(); c.translate(cx, cy); c.rotate(aim + Math.PI / 2);
         c.strokeStyle = 'rgba(255,255,255,.18)'; c.setLineDash([6, 8]); c.lineWidth = 2; c.beginPath(); c.moveTo(0, -36); c.lineTo(0, -320); c.stroke(); c.setLineDash([]);
-        c.fillStyle = '#15803d'; c.beginPath(); c.ellipse(0, 4, 30, 34, 0, 0, 6.283); c.fill();
+        c.fillStyle = 'rgba(0,0,0,.3)'; c.beginPath(); c.ellipse(3, 10, 32, 34, 0, 0, 6.283); c.fill();
+        c.fillStyle = '#15803d'; c.beginPath(); c.ellipse(0, 4, 30, 34, 0, 0, 6.283); c.fill(); c.fillStyle = '#166534'; for (var sp2 = 0; sp2 < 5; sp2++) { c.beginPath(); c.arc(Math.cos(sp2 * 1.3) * 16, 10 + Math.sin(sp2 * 1.3) * 12, 3.5, 0, 6.283); c.fill(); }
         c.fillStyle = '#22c55e'; c.beginPath(); c.ellipse(0, 0, 25, 28, 0, 0, 6.283); c.fill();
         c.fillStyle = '#fff'; c.beginPath(); c.arc(-11, -16, 8, 0, 6.283); c.arc(11, -16, 8, 0, 6.283); c.fill();
         c.fillStyle = '#111'; c.beginPath(); c.arc(-11, -18, 3.5, 0, 6.283); c.arc(11, -18, 3.5, 0, 6.283); c.fill();

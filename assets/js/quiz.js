@@ -61,13 +61,15 @@ window.GAMES.quiz = {
         c.textAlign = 'center'; c.textBaseline = 'middle';
         c.fillStyle = '#bfdbfe'; c.font = '800 15px system-ui'; c.fillText('Вопрос ' + qn + ' из ' + Q + '   ✔ ' + right + (streak >= 3 ? '   🔥 ×' + streak : ''), W / 2, 28);
         // полоска времени
+        for (var qi = 0; qi < Q; qi++) { c.fillStyle = qi < qn - 1 ? '#60a5fa' : qi === qn - 1 ? '#fde68a' : 'rgba(255,255,255,.15)'; c.beginPath(); c.arc(W / 2 + (qi - (Q - 1) / 2) * 16, 66, qi === qn - 1 ? 5 : 3.5, 0, 6.283); c.fill(); }
         K.rr(c, 20, 46, W - 40, 8, 4); c.fillStyle = 'rgba(255,255,255,.12)'; c.fill();
         K.rr(c, 20, 46, (W - 40) * Math.max(0, timeLeft / TL[api.diff]), 8, 4); c.fillStyle = timeLeft < 3 ? '#f87171' : '#60a5fa'; c.fill();
         if (endT > 0) { c.fillStyle = '#fff'; c.font = '900 28px system-ui'; c.fillText('Правильно ' + right + ' из ' + Q, W / 2, H * 0.4); return; }
         c.fillStyle = '#fff';
         if (kind === 'flag') {
           c.font = '700 17px system-ui'; c.fillText('Чей это флаг?', W / 2, 90);
-          c.font = Math.round(Math.min(130, H * 0.17)) + 'px system-ui'; c.fillText(cur[0], W / 2, H * 0.27);
+          var fw = Math.min(W - 80, 240), fh2 = Math.min(H * 0.22, 170); K.rr(c, W / 2 - fw / 2, H * 0.27 - fh2 / 2, fw, fh2, 22); c.fillStyle = 'rgba(255,255,255,.08)'; c.fill(); c.strokeStyle = 'rgba(255,255,255,.15)'; c.lineWidth = 1.5; c.stroke();
+          c.font = Math.round(Math.min(130, H * 0.17)) + 'px system-ui'; c.fillText(cur[0], W / 2, H * 0.27 + Math.sin(t * 2) * 3);
         } else {
           c.font = '700 17px system-ui'; c.fillText('Столица страны', W / 2, 90);
           c.font = Math.round(Math.min(80, H * 0.1)) + 'px system-ui'; c.fillText(cur[0], W / 2, H * 0.21);

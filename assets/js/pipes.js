@@ -59,23 +59,25 @@ window.GAMES.pipes = {
       },
       draw: function (c) {
         var W = api.W, H = api.H;
-        c.fillStyle = '#0f172a'; c.fillRect(0, 0, W, H);
+        var bg0 = c.createLinearGradient(0, 0, 0, H); bg0.addColorStop(0, '#0f172a'); bg0.addColorStop(1, '#172554'); c.fillStyle = bg0; c.fillRect(0, 0, W, H);
+        c.strokeStyle = 'rgba(148,163,184,.06)'; c.lineWidth = 1; for (var bx2 = 0; bx2 < W; bx2 += 30) { c.beginPath(); c.moveTo(bx2, 0); c.lineTo(bx2, H); c.stroke(); }
         c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillStyle = '#e2e8f0'; c.font = '800 15px system-ui';
         c.fillText('Уровень ' + Math.min(5, lvl + (winT > 0 ? 0 : 1)) + ' из 5 · поворотов ' + moves, W / 2, 30);
         window.GBK.rr(c, ox - 6, oy - 6, cs * N + 12, cs * N + 12, 12); c.fillStyle = '#1e293b'; c.fill();
         for (var i = 0; i < N * N; i++) {
           var x = ox + (i % N) * cs + cs / 2, y = oy + Math.floor(i / N) * cs + cs / 2, wet = water[i];
-          c.fillStyle = '#273449'; c.fillRect(x - cs / 2 + 1.5, y - cs / 2 + 1.5, cs - 3, cs - 3);
+          var tg = c.createLinearGradient(x - cs / 2, y - cs / 2, x + cs / 2, y + cs / 2); tg.addColorStop(0, '#334155'); tg.addColorStop(1, '#1e293b'); c.fillStyle = tg; window.GBK.rr(c, x - cs / 2 + 2, y - cs / 2 + 2, cs - 4, cs - 4, cs * 0.12); c.fill(); c.fillStyle = 'rgba(255,255,255,.05)'; c.fillRect(x - cs / 2 + 4, y - cs / 2 + 4, cs - 8, 2);
           c.save(); c.translate(x, y); c.rotate(-spin[i] * Math.PI / 2);
           c.lineCap = 'round';
-          [[0, 0.26, '#0b1220'], [1, 0.18, wet ? '#38bdf8' : '#64748b']].forEach(function (pass) {
+          [[0, 0.3, '#0b1220'], [1, 0.22, wet ? '#0284c7' : '#475569'], [2, 0.12, wet ? '#7dd3fc' : '#94a3b8']].forEach(function (pass) {
             c.strokeStyle = pass[2]; c.lineWidth = cs * pass[1]; c.beginPath();
             for (var d = 1; d <= 8; d <<= 1) if (cells[i] & d) { c.moveTo(0, 0); c.lineTo(DR[d][1] * cs / 2, DR[d][0] * cs / 2); }
             c.stroke();
           });
+          if (wet) { c.strokeStyle = 'rgba(255,255,255,.55)'; c.lineWidth = cs * 0.05; c.setLineDash([cs * 0.08, cs * 0.22]); c.lineDashOffset = -t * cs * 1.2; c.beginPath(); for (var d2 = 1; d2 <= 8; d2 <<= 1) if (cells[i] & d2) { c.moveTo(DR[d2][1] * cs / 2, DR[d2][0] * cs / 2); c.lineTo(0, 0); } c.stroke(); c.setLineDash([]); }
           var deg = [1, 2, 4, 8].filter(function (d) { return cells[i] & d; }).length;
           if (i === src) { c.fillStyle = '#0ea5e9'; c.beginPath(); c.arc(0, 0, cs * 0.24, 0, 6.283); c.fill(); c.fillStyle = '#fff'; c.font = Math.round(cs * 0.26) + 'px system-ui'; c.fillText('💧', 0, 1); }
-          else if (deg === 1) { c.fillStyle = wet ? '#0ea5e9' : '#475569'; c.beginPath(); c.arc(0, 0, cs * 0.17, 0, 6.283); c.fill(); }
+          else if (deg === 1) { c.fillStyle = '#0b1220'; c.beginPath(); c.arc(0, 0, cs * 0.2, 0, 6.283); c.fill(); c.fillStyle = wet ? '#22c55e' : '#64748b'; c.beginPath(); c.arc(0, 0, cs * 0.15, 0, 6.283); c.fill(); c.fillStyle = 'rgba(255,255,255,.35)'; c.beginPath(); c.arc(-cs * 0.04, -cs * 0.05, cs * 0.05, 0, 6.283); c.fill(); }
           c.restore();
         }
         if (winT > 0) window.GBK.toast(c, W, H - 46, lvl >= 5 ? 'Все уровни пройдены! 🎉' : 'Вода дошла везде! Следующий уровень…', 1);

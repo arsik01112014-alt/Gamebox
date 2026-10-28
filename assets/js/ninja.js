@@ -54,6 +54,10 @@ window.GAMES.ninja = {
       draw: function (c) {
         var W = api.W, H = api.H, g = c.createLinearGradient(0, 0, 0, H);
         g.addColorStop(0, '#1e1b4b'); g.addColorStop(1, '#0f172a'); c.fillStyle = g; c.fillRect(0, 0, W, H);
+        var mg = c.createRadialGradient(W * 0.62, H * 0.22, 10, W * 0.62, H * 0.22, 120); mg.addColorStop(0, 'rgba(254,243,199,.35)'); mg.addColorStop(1, 'rgba(254,243,199,0)'); c.fillStyle = mg; c.fillRect(0, 0, W, H);
+        c.fillStyle = '#fef3c7'; c.beginPath(); c.arc(W * 0.62, H * 0.22, 34, 0, 6.283); c.fill(); c.fillStyle = 'rgba(234,179,8,.25)'; c.beginPath(); c.arc(W * 0.62 - 10, H * 0.22 - 6, 7, 0, 6.283); c.arc(W * 0.62 + 12, H * 0.22 + 8, 5, 0, 6.283); c.fill();
+        // силуэт пагоды, медленно уезжает вниз
+        var py = H - 120 + Math.min(260, camY * 0.2); c.fillStyle = 'rgba(15,23,42,.8)'; for (var fl = 0; fl < 4; fl++) { var fw = 120 - fl * 22, fy = py - fl * 46; c.fillRect(W / 2 - fw / 2 + 10, fy, fw - 20, 46); c.beginPath(); c.moveTo(W / 2 - fw / 2 - 14, fy + 4); c.lineTo(W / 2, fy - 18); c.lineTo(W / 2 + fw / 2 + 14, fy + 4); c.fill(); }
         // фонари на дальнем плане
         for (var k = 0; k < 24; k++) { var ly = ((k * 173 + camY * 0.3) % (H + 100)) - 50; c.fillStyle = 'rgba(255,255,255,' + (0.25 + (k % 4) * 0.12) + ')'; c.fillRect(WW + ((k * 97) % (W - WW * 2)), H - ly, 2, 2); }
         // стены из кирпича
@@ -73,9 +77,13 @@ window.GAMES.ninja = {
         });
         // ниндзя
         c.save(); c.translate(P.x, sy(P.y)); c.rotate(P.air ? P.rot : 0); if (!P.air && P.side) c.scale(-1, 1);
-        c.fillStyle = '#111827'; c.beginPath(); c.arc(0, 0, 14, 0, 6.283); c.fill();
-        c.fillStyle = '#dc2626'; c.fillRect(-14, -5, 28, 6); c.strokeStyle = '#dc2626'; c.lineWidth = 3; c.beginPath(); c.moveTo(-13, -2); c.lineTo(-24, 2 + Math.sin(t * 20) * 3); c.stroke();
-        c.fillStyle = '#fff'; c.beginPath(); c.arc(6, -2, 2.3, 0, 6.283); c.fill();
+        c.scale(1.25, 1.25);
+        c.strokeStyle = '#94a3b8'; c.lineWidth = 2.5; c.beginPath(); c.moveTo(-10, 10); c.lineTo(12, -14); c.stroke(); c.fillStyle = '#7c2d12'; c.fillRect(-12, 8, 6, 4);
+        c.fillStyle = '#111827'; c.beginPath(); c.ellipse(0, 3, 12, 14, 0, 0, 6.283); c.fill(); c.beginPath(); c.arc(0, -8, 10, 0, 6.283); c.fill();
+        c.fillStyle = '#fcd9b6'; c.fillRect(-7, -11, 14, 5);
+        c.fillStyle = '#111'; c.fillRect(-4, -10, 3, 3); c.fillRect(2, -10, 3, 3);
+        c.fillStyle = '#dc2626'; c.fillRect(-10, -15, 20, 4); c.strokeStyle = '#dc2626'; c.lineWidth = 3; c.lineCap = 'round'; c.beginPath(); c.moveTo(-9, -13); c.quadraticCurveTo(-18, -14 + Math.sin(t * 18) * 3, -24, -8 + Math.sin(t * 20) * 4); c.stroke();
+        c.fillStyle = '#1f2937'; c.fillRect(-12, 1, 24, 3);
         c.restore();
         c.textAlign = 'center'; c.fillStyle = '#fff'; c.font = '800 16px system-ui'; c.fillText(height + ' м   🪙 ' + coins, W / 2, 30);
         if (t < 3) { c.font = '700 14px system-ui'; c.fillText('Нажимай — прыжок, в воздухе — ещё раз', W / 2, H - 60); }

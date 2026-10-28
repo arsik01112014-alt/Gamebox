@@ -66,6 +66,82 @@ pre { background:var(--card); border:1px solid var(--line); border-radius:12px; 
 .chatin button { width:56px; flex:none; font-size:20px; }
 .qr { display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; }
 .qr button { width:auto; padding:7px 10px; font-size:12px; }
+
+/* ===== 2.6: оформление ===== */
+:root { --bg:#070a16; --card:rgba(22,28,48,.72); --card2:rgba(36,44,72,.85); --line:rgba(148,163,255,.14); }
+body { background:var(--bg); min-height:100vh; }
+body::before, body::after { content:""; position:fixed; z-index:-1; width:70vmax; height:70vmax; border-radius:50%; filter:blur(60px); opacity:.55; pointer-events:none; }
+body::before { left:-30vmax; top:-25vmax; background:radial-gradient(circle,#4c1d95,transparent 65%); animation:blobA 18s ease-in-out infinite alternate; }
+body::after { right:-30vmax; bottom:-30vmax; background:radial-gradient(circle,#831843,transparent 65%); animation:blobB 22s ease-in-out infinite alternate; }
+@keyframes blobA { to { transform:translate(12vmax,10vmax) scale(1.1); } }
+@keyframes blobB { to { transform:translate(-10vmax,-8vmax) scale(1.15); } }
+header { background:linear-gradient(135deg,rgba(124,92,255,.82),rgba(236,72,153,.78)); -webkit-backdrop-filter:blur(16px); backdrop-filter:blur(16px); border-bottom:1px solid rgba(255,255,255,.18); }
+header h1 { display:flex; flex-direction:column; text-shadow:0 2px 12px rgba(0,0,0,.25); }
+nav button { transition:background .2s, transform .15s; border:1px solid rgba(255,255,255,.12); }
+nav button:active { transform:scale(.94); }
+nav button.on { background:#fff; color:#4c1d95; box-shadow:0 6px 18px rgba(0,0,0,.25); }
+button { transition:transform .12s, filter .2s; box-shadow:0 4px 14px -6px rgba(124,92,255,.8); }
+button:active { transform:scale(.96); }
+button:not(.sec):not(.red):not(.green):not(.amber):not(.ghost) { background:linear-gradient(135deg,#7c5cff,#a855f7); }
+button.red { background:linear-gradient(135deg,#ef4444,#be123c); box-shadow:0 4px 14px -6px #ef4444; }
+button.green { background:linear-gradient(135deg,#4ade80,#16a34a); box-shadow:0 4px 14px -6px #22c55e; }
+button.amber { background:linear-gradient(135deg,#fbbf24,#f59e0b); box-shadow:0 4px 14px -6px #f59e0b; }
+button.sec { box-shadow:none; border:1px solid var(--line); }
+button[disabled] { opacity:.45; }
+main > * { animation:rise .35s ease backwards; }
+@keyframes rise { from { opacity:0; transform:translateY(10px); } }
+h2 { display:flex; align-items:center; gap:8px; color:#c4b5fd; }
+h2::after { content:""; flex:1; height:1px; background:linear-gradient(90deg,rgba(196,181,253,.4),transparent); }
+.row { -webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px); box-shadow:0 8px 24px -16px rgba(0,0,0,.8); transition:transform .12s, border-color .2s; }
+.row.click:hover { border-color:rgba(167,139,250,.45); }
+.row.click:active { transform:scale(.985); }
+input, textarea, select { background:rgba(10,14,30,.7); transition:border-color .2s, box-shadow .2s; }
+input:focus, textarea:focus, select:focus { outline:none; border-color:#a78bfa; box-shadow:0 0 0 3px rgba(167,139,250,.25); }
+.av { background:linear-gradient(135deg,#312e81,#831843); box-shadow:0 4px 12px -4px rgba(0,0,0,.6); }
+.av i.on { box-shadow:0 0 8px var(--green); }
+/* плитки статистики */
+.stats { gap:10px; }
+.stat { position:relative; overflow:hidden; padding:14px 14px 12px; border:1px solid rgba(255,255,255,.08); background:linear-gradient(150deg,var(--s1,#7c5cff),var(--s2,#4c1d95)); box-shadow:0 14px 30px -18px var(--s1,#7c5cff); animation:rise .4s ease backwards; }
+.stat::after { content:""; position:absolute; right:-30px; top:-30px; width:110px; height:110px; border-radius:50%; background:rgba(255,255,255,.12); }
+.stat .ic { display:grid; place-items:center; width:38px; height:38px; border-radius:12px; background:rgba(255,255,255,.18); font-size:20px; }
+.stat b { font-size:30px; font-weight:900; letter-spacing:-.5px; text-shadow:0 2px 10px rgba(0,0,0,.25); }
+.stat small { color:rgba(255,255,255,.82); font-weight:600; }
+.stat:nth-child(8n+1) { --s1:#22c55e; --s2:#0f766e; } .stat:nth-child(8n+2) { --s1:#7c5cff; --s2:#4338ca; }
+.stat:nth-child(8n+3) { --s1:#f59e0b; --s2:#c2410c; } .stat:nth-child(8n+4) { --s1:#3b82f6; --s2:#1e40af; }
+.stat:nth-child(8n+5) { --s1:#ec4899; --s2:#9d174d; } .stat:nth-child(8n+6) { --s1:#ef4444; --s2:#7f1d1d; }
+.stat:nth-child(8n+7) { --s1:#06b6d4; --s2:#155e75; } .stat:nth-child(8n+8) { --s1:#a855f7; --s2:#6b21a8; }
+.stat:nth-child(2) { animation-delay:.04s; } .stat:nth-child(3) { animation-delay:.08s; } .stat:nth-child(4) { animation-delay:.12s; }
+.stat:nth-child(5) { animation-delay:.16s; } .stat:nth-child(6) { animation-delay:.2s; } .stat:nth-child(7) { animation-delay:.24s; } .stat:nth-child(8) { animation-delay:.28s; }
+/* главная панель */
+.dash { display:flex; align-items:center; gap:16px; padding:16px; margin-bottom:12px; border-radius:22px; border:1px solid rgba(255,255,255,.1);
+  background:radial-gradient(120% 100% at 100% 0%,rgba(236,72,153,.35),transparent 60%),linear-gradient(135deg,rgba(76,29,149,.85),rgba(30,27,75,.85)); box-shadow:0 20px 40px -24px #7c5cff; }
+.dash .dt { flex:1; min-width:0; }
+.dash .dt small { color:#c4b5fd; font-weight:700; letter-spacing:1px; text-transform:uppercase; font-size:11px; }
+.dash .dt b { display:block; font-size:22px; margin:2px 0 6px; }
+.dash .dt span { color:#ddd6fe; font-size:13px; }
+.ring { position:relative; width:96px; height:96px; flex:none; }
+.ring svg { transform:rotate(-90deg); }
+.ring div { position:absolute; inset:0; display:grid; place-items:center; text-align:center; font-weight:900; font-size:22px; line-height:1; }
+.ring div small { display:block; font-size:10px; color:#c4b5fd; font-weight:700; margin-top:2px; }
+.spark { display:flex; align-items:flex-end; gap:6px; height:110px; padding:12px 12px 8px; }
+.spark div { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; gap:4px; height:100%; font-size:11px; color:var(--muted); }
+.spark i { display:block; width:100%; border-radius:8px 8px 3px 3px; background:linear-gradient(#f0abfc,#7c5cff); box-shadow:0 0 14px -4px #a855f7; animation:grow .6s ease backwards; transform-origin:bottom; }
+.spark div.today i { background:linear-gradient(#fde68a,#f59e0b); box-shadow:0 0 14px -4px #f59e0b; }
+@keyframes grow { from { transform:scaleY(0); } }
+.avs { display:flex; gap:8px; overflow-x:auto; padding:4px 2px 8px; scrollbar-width:none; }
+.avs .av { width:48px; height:48px; font-size:26px; cursor:pointer; }
+.gbar { height:10px; border-radius:6px; background:rgba(255,255,255,.08); margin-top:6px; overflow:hidden; }
+.gbar i { display:block; height:100%; border-radius:6px; animation:growX .7s ease backwards; transform-origin:left; }
+@keyframes growX { from { transform:scaleX(0); } }
+.gdot { width:34px; height:34px; border-radius:11px; flex:none; display:grid; place-items:center; font-weight:900; font-size:14px; }
+nav button:not(.on) { background:rgba(255,255,255,.14) !important; box-shadow:none; }
+.filters button { background:var(--card2) !important; box-shadow:none; border:1px solid var(--line); }
+.filters button.on { background:linear-gradient(135deg,#7c5cff,#ec4899) !important; border-color:transparent; box-shadow:0 4px 14px -6px #ec4899; }
+.gch { background:var(--card) !important; box-shadow:none; }
+.gch.off { background:var(--card2) !important; }
+.badges button.off, .bdg.off { box-shadow:none; }
+#toast { background:linear-gradient(135deg,#1e1b4b,#312e81); border:1px solid rgba(167,139,250,.4); font-weight:600; }
+.sheet { background:linear-gradient(180deg,#141a33,#0a0e1a); }
 </style>
 </head>
 <body>
@@ -88,7 +164,8 @@ var SORTS = [['seen', 'Недавние'], ['lv', 'Уровень'], ['co', 'М�
 var tab = 'home', flt = 'all', query = '', D = null, me = null, openUid = null, chatUid = null, seenSup = null;
 
 var GL = null; // список игр с сайта (games.json)
-function loadGames() { fetch('https://arsik01112014-alt.github.io/Gamebox/games.json?t=' + Date.now()).then(function (r) { return r.json(); }).then(function (j) { GL = j; if (tab === 'games') render(); }).catch(function () { GL = GL || []; if (tab === 'games') render(); }); }
+function loadGames() { fetch('https://arsik01112014-alt.github.io/Gamebox/games.json?t=' + Date.now()).then(function (r) { return r.json(); }).then(function (j) { GL = j; if (tab === 'games' || tab === 'stats') render(); }).catch(function () { GL = GL || []; if (tab === 'games') render(); }); }
+loadGames();
 function gTitle(id) { var g = GL && GL.filter(function (x) { return x.id === id; })[0]; return g ? g.t : id; }
 var QR_DEF = ['Спасибо, передал разработчику!', 'Исправим в следующем обновлении 👍', 'Обнови игру до последней версии', 'Начислил монеты в подарок 🎁'];
 function qrList() { var q = ls('adm_qr'); return q && q.length ? q : QR_DEF.slice(); }
@@ -237,13 +314,20 @@ function render() {
   var warn = D.failed ? '<p class="note">⚠️ Часть данных не загрузилась. Скорее всего, нужно обновить правила базы: вкладка «Настройка».</p>' : '';
   var P = D.players, now = Date.now();
   if (tab === 'home') {
-    var online = P.filter(function (p) { return p.on; });
-    v.innerHTML = warn + '<div class="stats">' +
+    var online = P.filter(function (p) { return p.on; }), day1 = P.filter(function (p) { return now - p.s < 86400000; }).length;
+    var wk = []; for (var wi = 6; wi >= 0; wi--) { var w0 = new Date(); w0.setHours(0, 0, 0, 0); w0 = w0.getTime() - wi * 86400000; wk.push({ d: new Date(w0).toLocaleDateString('ru-RU', { weekday: 'short' }), n: P.filter(function (p) { return p.s >= w0 && p.s < w0 + 86400000; }).length, t: !wi }); }
+    var wmax = Math.max.apply(null, wk.map(function (x) { return x.n; }).concat(1)), share = P.length ? day1 / P.length : 0, C = 2 * Math.PI * 40;
+    var hr = new Date().getHours(), hello = hr < 6 ? 'Доброй ночи' : hr < 12 ? 'Доброе утро' : hr < 18 ? 'Добрый день' : 'Добрый вечер';
+    v.innerHTML = warn + '<div class="dash"><div class="dt"><small>' + new Date().toLocaleDateString('ru-RU', { weekday: 'long', day: 'numeric', month: 'long' }) + '</small><b>' + hello + ' 👋</b><span>В сети <b style="display:inline;font-size:inherit;color:#86efac">' + online.length + '</b> · за сутки ' + day1 + ' · ' + supUnread() + ' новых в поддержке</span></div>' +
+      '<div class="ring"><svg width="96" height="96"><circle cx="48" cy="48" r="40" fill="none" stroke="rgba(255,255,255,.1)" stroke-width="10"/><circle cx="48" cy="48" r="40" fill="none" stroke="url(#rg)" stroke-width="10" stroke-linecap="round" stroke-dasharray="' + (C * share).toFixed(1) + ' ' + C.toFixed(1) + '"/><defs><linearGradient id="rg"><stop offset="0" stop-color="#4ade80"/><stop offset="1" stop-color="#22d3ee"/></linearGradient></defs></svg><div>' + Math.round(share * 100) + '%<small>активны<br>за сутки</small></div></div></div>' +
+      (online.length ? '<h2>🟢 Сейчас в сети</h2><div class="avs">' + online.slice(0, 30).map(function (p) { return '<div class="av" data-uid="' + esc(p.u) + '" title="' + esc(p.n || '') + '">' + GBAV.html(p.a || 'i:kid') + '<i class="on"></i></div>'; }).join('') + '</div>' : '') +
+      '<h2>📈 Активность за неделю</h2><div class="row spark">' + wk.map(function (x, i) { return '<div class="' + (x.t ? 'today' : '') + '"><b style="color:var(--txt)">' + x.n + '</b><i style="height:' + Math.max(4, Math.round(x.n / wmax * 70)) + 'px;animation-delay:' + (i * 0.05) + 's"></i>' + x.d + '</div>'; }).join('') + '</div>' +
+      '<h2>📊 Сводка</h2><div class="stats">' +
       stat('🟢', online.length, 'Онлайн сейчас') + stat('👥', P.length, 'Всего игроков') +
       stat('🙂', P.filter(function (p) { return p.ty !== 'google'; }).length, 'Гостей') + stat('🔵', P.filter(function (p) { return p.ty === 'google'; }).length, 'Через Google') +
       stat('📅', P.filter(function (p) { return now - p.s < 86400000; }).length, 'Заходили за сутки') + stat('🚫', D.banList.length + D.ipBanList.length, 'Банов (аккаунт + IP)') +
       stat('🎮', D.rooms.filter(function (x) { return now - x.last < ROOM_MS; }).length, 'Открытых комнат') + stat('⚔️', D.rooms.filter(function (x) { return x.c && now - x.last < ROOM_MS; }).length, 'Матчей идёт') +
-      '</div><h2>Сейчас в сети</h2>' + (online.length ? online.slice(0, 20).map(playerRow).join('') : '<p class="note">Никого.</p>') +
+      '</div><h2>👥 Список в сети</h2>' + (online.length ? online.slice(0, 20).map(playerRow).join('') : '<p class="note">Никого.</p>') +
       '<p class="note">«В сети» — игра открыта и отмечалась за последние 3 минуты. Игроки, не заходившие после обновления, видны только по нику.</p>';
   } else if (tab === 'chat') {
     var C = D.support || [], cur = chatUid && C.filter(function (c) { return c.u === chatUid; })[0];
@@ -344,11 +428,12 @@ function render() {
     var topG = Object.keys(games).sort(function (a, b) { return games[b] - games[a]; }).slice(0, 10), maxG = topG.length ? games[topG[0]] : 1;
     v.innerHTML = warn + '<div class="stats">' + stat('🆕', newToday, 'Новых сегодня') + stat('🎲', plays, 'Партий сыграно') + stat('🪙', coins, 'Монет у игроков') +
       stat('📊', P.length ? Math.round(plays / P.length) : 0, 'Партий на игрока') + '</div>' +
-      '<h2>Последний заход по дням</h2><div class="row" style="display:flex;align-items:flex-end;gap:6px;height:150px">' + days.map(function (x) {
-        return '<div style="flex:1;text-align:center"><small>' + x.n + '</small><div style="height:' + Math.round(x.n / maxD * 100) + 'px;min-height:3px;border-radius:6px 6px 0 0;background:linear-gradient(#a78bfa,#6366f1)"></div><small>' + x.d + '</small></div>';
+      '<h2>📅 Последний заход по дням</h2><div class="row spark">' + days.map(function (x, i) {
+        return '<div class="' + (i === 6 ? 'today' : '') + '"><b style="color:var(--txt)">' + x.n + '</b><i style="height:' + Math.max(4, Math.round(x.n / maxD * 70)) + 'px;animation-delay:' + (i * 0.05) + 's"></i>' + x.d + '</div>';
       }).join('') + '</div>' +
-      '<h2>Популярные игры (игроков с рекордом)</h2>' + topG.map(function (g) {
-        return '<div class="row"><div class="m"><b>' + esc(g) + '</b><div style="height:8px;border-radius:4px;background:rgba(255,255,255,.1);margin-top:6px"><div style="height:8px;border-radius:4px;width:' + Math.round(games[g] / maxG * 100) + '%;background:linear-gradient(90deg,#22c55e,#facc15)"></div></div></div><b>' + games[g] + '</b></div>';
+      '<h2>🏅 Популярные игры (игроков с рекордом)</h2>' + topG.map(function (g, i) {
+        var gi = (GL || []).filter(function (x) { return x.id === g; })[0], col = gi && gi.col ? gi.col : ['#22c55e', '#facc15'];
+        return '<div class="row"><span class="gdot" style="background:linear-gradient(135deg,' + col[0] + ',' + col[1] + ')">' + (i < 3 ? ['🥇', '🥈', '🥉'][i] : i + 1) + '</span><div class="m"><b>' + esc(gi ? gi.t : g) + '</b><div class="gbar"><i style="width:' + Math.round(games[g] / maxG * 100) + '%;background:linear-gradient(90deg,' + col[0] + ',' + col[1] + ');animation-delay:' + (i * 0.05) + 's"></i></div></div><b>' + games[g] + '</b></div>';
       }).join('') +
       '<button class="sec" data-act="export" style="width:100%;margin-top:12px">📋 Скопировать список игроков (CSV)</button>' +
       '<h2>⚠️ Подозрительные игроки (' + P.filter(function (p) { return suspicion(p).length; }).length + ')</h2>' + (P.filter(function (p) { return suspicion(p).length; }).slice(0, 15).map(function (p) {
