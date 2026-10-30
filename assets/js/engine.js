@@ -645,6 +645,10 @@
   /* ---------- онлайн через Firebase Realtime Database (REST + SSE, без SDK) ---------- */
   // Комната: rooms/{CODE} = { g: игра, h: хозяин {u,n,a}, c: гость {u,n,a}, t: время, pub: в общем списке, hb: {h,c}, m: {pushId: {f, d}} }
   var FB = { key: 'AIzaSyDglJuu3uT8vIrAsLByo8cqMWywbS1rgxw', db: 'https://gamebox-73da2-default-rtdb.europe-west1.firebasedatabase.app' };
+  // v5.9.1: онлайн-комнаты живут в отдельном проекте — у них свой лимит одновременных подключений и трафика.
+  // Включается кнопкой в админке (/app/rooms2 = true) после того, как в новую базу вставлены правила
+  var FB2 = { key: 'AIzaSyDRiuRiKuiRCHyN_Yi9kPzxct_CCyhu6uY', db: 'https://gamebox-rooms-default-rtdb.europe-west1.firebasedatabase.app' };
+  function roomPath(path) { return /^\/rooms(\/|$)/.test(path) && store.get('rooms2', false) === true; }
   var Online = {
     me: null, code: null, role: null, es: null, pollT: 0, hbT: 0, wdT: 0, listT: 0, seen: {}, peerT: 0, q: [], qBusy: false, esFails: 0, gen: 0,
     test: store.get('fbTest', null), // { db: 'http://127.0.0.1:port' } — локальная имитация для автотестов
@@ -668,15 +672,34 @@
         self.me = uid; cb(tok);
       }).catch(function () { cb(null); });
     },
+    auth2: function (cb) {
+      var self = this;
+      if (this.test) { this.auth(cb); return; }
+      var a = store.get('fbAuth2', null);
+      if (a && a.tok && a.exp > Date.now() + 60000) { this.auth(function () { cb(a.tok); }); return; } // основной вход тоже нужен: Online.me — id игрока в комнатах
+      if (this.authQ2) { this.authQ2.push(cb); return; }
+      this.authQ2 = [cb];
+      var done = function (tok) { var q = self.authQ2 || []; self.authQ2 = null; self.auth(function () { q.forEach(function (f) { try { f(tok); } catch (e) { } }); }); };
+      var refresh = a && a.rt;
+      var url = refresh ? 'https://securetoken.googleapis.com/v1/token?key=' + FB2.key : 'https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=' + FB2.key;
+      fetch(url, { method: 'POST', headers: { 'Content-Type': refresh ? 'application/x-www-form-urlencoded' : 'application/json' }, body: refresh ? 'grant_type=refresh_token&refresh_token=' + encodeURIComponent(refresh) : '{"returnSecureToken":true}' })
+        .then(function (r) { return r.json(); }).then(function (j) {
+          var tok = j.idToken || j.id_token;
+          if (!tok) { store.set('fbAuth2', null); if (refresh) { var q0 = self.authQ2 || []; self.authQ2 = null; self.auth2(function (t) { q0.forEach(function (f) { try { f(t); } catch (e) { } }); }); return; } done(null); return; }
+          store.set('fbAuth2', { tok: tok, rt: j.refreshToken || j.refresh_token, exp: Date.now() + (+(j.expiresIn || j.expires_in) || 3600) * 1000 });
+          done(tok);
+        }).catch(function () { done(null); });
+    },
+    authFor: function (path, cb) { if (roomPath(path)) this.auth2(cb); else this.auth(cb); },
     url: function (path, tok, q) {
-      var u = this.dbUrl() + path + '.json', qs = [];
+      var u = (roomPath(path) && !this.test ? FB2.db : this.dbUrl()) + path + '.json', qs = [];
       if (tok && !this.test) qs.push('auth=' + encodeURIComponent(tok));
       if (q) qs.push(q);
       return qs.length ? u + '?' + qs.join('&') : u;
     },
     req: function (method, path, body, cb, q) {
       var self = this;
-      this.auth(function (tok) {
+      this.authFor(path, function (tok) {
         if (!tok) { if (cb) cb('auth'); return; }
         var o = { method: method };
         if (body !== undefined) o.body = JSON.stringify(typeof body === 'function' ? body() : body);
@@ -769,13 +792,13 @@
       var self = this;
       this.peerT = Date.now();
       if (!window.EventSource || this.esFails >= 3) { this.poll(gen); return; }
-      this.auth(function (tok) {
+      this.authFor('/rooms', function (tok) {
         if (gen !== self.gen) return;
         var es; try { es = new EventSource(self.url('/rooms/' + self.code, tok)); } catch (e) { self.esFails = 3; self.poll(gen); return; }
         self.es = es; var opened = false;
         var on = function (ev) { if (gen !== self.gen) return; opened = true; self.esFails = 0; try { var j = JSON.parse(ev.data); self.apply(j.path, j.data, ev.type === 'patch'); } catch (x) { } };
         es.addEventListener('put', on); es.addEventListener('patch', on);
-        es.addEventListener('auth_revoked', function () { if (gen !== self.gen) return; es.close(); store.set('fbAuth', null); self.listen(gen); });
+        es.addEventListener('auth_revoked', function () { if (gen !== self.gen) return; es.close(); store.set(roomPath('/rooms') ? 'fbAuth2' : 'fbAuth', null); self.listen(gen); });
         es.addEventListener('cancel', function () { if (gen !== self.gen) return; es.close(); self.esFails = 3; self.poll(gen); });
         es.onerror = function () {
           if (gen !== self.gen || opened) return;
@@ -1386,7 +1409,7 @@
       '<button class="btn" data-set="close">' + t('set.done') + '</button>' +
       '<div class="ver">' + t('set.version') + ' ' + APP_NAME + '</div>';
   }
-  var APP_NAME = '5.9', APP_CODE = 59, updInfo = null, updBarHidden = false;
+  var APP_NAME = '6.0', APP_CODE = 60, updInfo = null, updBarHidden = false;
   // обновление APK: в /app/latest лежит {code, name, notes, url}, админка публикует его кнопкой.
   // WebView приложения не умеет скачивать файлы сам, поэтому «Скачать» копирует ссылку для браузера
   function checkUpdate() {
@@ -1749,7 +1772,7 @@
       var N = A.news;
       if (N && N.id && N.text && store.get('newsSeen', 0) !== N.id) { store.set('newsSeen', N.id); adminNote(N.title || '📢 Объявление', N.text); }
       var E = A.event;
-      applyCfg(A);
+      applyCfg(A); store.set('rooms2', A.rooms2 === true);
       evMul = E && E.mul > 1 && E.until > Date.now() ? +E.mul : 1;
       evXp = E && E.xp > 1 && E.until > Date.now() ? +E.xp : 1;
       if ((evMul > 1 || evXp > 1) && store.get('evSeen', 0) !== E.until) { store.set('evSeen', E.until); api.toast('🎉 ' + (E.title || 'Событие') + ': ' + [evMul > 1 ? 'монеты ×' + evMul : '', evXp > 1 ? 'опыт ×' + evXp : ''].filter(Boolean).join(', ') + ' до ' + new Date(E.until).toLocaleString('ru-RU', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })); }
