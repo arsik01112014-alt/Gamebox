@@ -159,7 +159,7 @@ var FB = { key: 'AIzaSyDglJuu3uT8vIrAsLByo8cqMWywbS1rgxw', db: 'https://gamebox-
 var ONLINE_MS = 3 * 60 * 1000, ROOM_MS = 45000;
 var BADGES = { creator: ['👑', 'Создатель'], admin: ['🛡️', 'Админ'], moder: ['🔨', 'Модератор'], tester: ['🧪', 'Тестер'], vip: ['💎', 'VIP'], verified: ['✅', 'Проверен'] };
 var TABS = [['home', '📊 Обзор'], ['chat', '💬 Поддержка'], ['players', '👥 Игроки'], ['bans', '🚫 Баны'], ['rooms', '🎮 Комнаты'], ['top', '🏆 Рейтинг'], ['promos', '🎁 Промокоды'], ['news', '📢 Рассылка'], ['games', '🕹 Игры'], ['stats', '📈 Статистика'], ['setup', '⚙️ Настройка']];
-var FILTERS = [['all', 'Все'], ['on', 'Онлайн'], ['sus', '⚠️ Подозрительные'], ['guest', 'Гости'], ['google', 'Google'], ['ban', 'Забанены'], ['badge', 'Со значками']];
+var FILTERS = [['all', 'Все'], ['on', 'Онлайн'], ['sus', '⚠️ Подозрительные'], ['guest', 'Гости'], ['google', 'Google'], ['ban', 'Забанены'], ['badge', 'Со значками'], ['s_rustore', '📲 RuStore'], ['s_apk', '📦 APK'], ['s_web', '🌐 Сайт'], ['s_tg', '✈️ Telegram'], ['today', '🆕 Новые за сутки']];
 var SORTS = [['seen', 'Недавние'], ['lv', 'Уровень'], ['co', 'Монеты'], ['pl', 'Партии'], ['new', 'Новые']], srt = 'seen';
 var tab = 'home', flt = 'all', query = '', D = null, me = null, openUid = null, chatUid = null, seenSup = null;
 
@@ -322,6 +322,15 @@ function render() {
       '<div class="ring"><svg width="96" height="96"><circle cx="48" cy="48" r="40" fill="none" stroke="rgba(255,255,255,.1)" stroke-width="10"/><circle cx="48" cy="48" r="40" fill="none" stroke="url(#rg)" stroke-width="10" stroke-linecap="round" stroke-dasharray="' + (C * share).toFixed(1) + ' ' + C.toFixed(1) + '"/><defs><linearGradient id="rg"><stop offset="0" stop-color="#4ade80"/><stop offset="1" stop-color="#22d3ee"/></linearGradient></defs></svg><div>' + Math.round(share * 100) + '%<small>активны<br>за сутки</small></div></div></div>' +
       (online.length ? '<h2>🟢 Сейчас в сети</h2><div class="avs">' + online.slice(0, 30).map(function (p) { return '<div class="av" data-uid="' + esc(p.u) + '" title="' + esc(p.n || '') + '">' + GBAV.html(p.a || 'i:kid') + '<i class="on"></i></div>'; }).join('') + '</div>' : '') +
       '<h2>📈 Активность за неделю</h2><div class="row spark">' + wk.map(function (x, i) { return '<div class="' + (x.t ? 'today' : '') + '"><b style="color:var(--txt)">' + x.n + '</b><i style="height:' + Math.max(4, Math.round(x.n / wmax * 70)) + 'px;animation-delay:' + (i * 0.05) + 's"></i>' + x.d + '</div>'; }).join('') + '</div>' +
+      (function () {
+        var cnt = {}, known = 0; P.forEach(function (p) { var k = srcOf(p); if (SRC[k]) { cnt[k] = (cnt[k] || 0) + 1; known++; } });
+        var keys = Object.keys(SRC).filter(function (k) { return cnt[k]; });
+        var recent = P.filter(function (p) { return regTime(p); }).sort(function (a, b) { return regTime(b) - regTime(a); }).slice(0, 8);
+        return '<h2>📍 Откуда игроки</h2>' + (keys.length ? '<div class="row" style="display:block"><div style="display:flex;height:14px;border-radius:8px;overflow:hidden;margin-bottom:10px">' + keys.map(function (k) { return '<i style="flex:' + cnt[k] + ';background:' + SRC[k][2] + '"></i>'; }).join('') + '</div>' +
+          keys.map(function (k) { return '<div style="display:flex;justify-content:space-between;padding:3px 0"><span>' + SRC[k][0] + ' ' + SRC[k][1] + '</span><b>' + cnt[k] + ' · ' + Math.round(cnt[k] / known * 100) + '%</b></div>'; }).join('') +
+          '<p class="note" style="margin:6px 0 0">Источник известен у ' + known + ' из ' + P.length + ': остальные ещё не обновили игру до 5.9.</p></div>' : '<p class="note">Пока нет данных: источник появится, когда игроки обновятся до версии 5.9.</p>') +
+          (recent.length ? '<h2>🆕 Последние регистрации</h2>' + recent.map(function (p) { return '<div class="row click" data-uid="' + esc(p.u) + '"><div class="av">' + GBAV.html(p.a || 'i:kid') + '</div><div class="m"><b>' + esc(p.n || 'без ника') + srcChip(srcOf(p)) + '</b><small>' + new Date(regTime(p)).toLocaleString('ru-RU', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) + ' · ' + ago(regTime(p)) + '</small></div></div>'; }).join('') : '');
+      })() +
       '<h2>📊 Сводка</h2><div class="stats">' +
       stat('🟢', online.length, 'Онлайн сейчас') + stat('👥', P.length, 'Всего игроков') +
       stat('🙂', P.filter(function (p) { return p.ty !== 'google'; }).length, 'Гостей') + stat('🔵', P.filter(function (p) { return p.ty === 'google'; }).length, 'Через Google') +
@@ -453,9 +462,18 @@ function render() {
   }
 }
 function stat(ic, n, label) { return '<div class="stat"><span class="ic">' + ic + '</span><b>' + n + '</b><small>' + label + '</small></div>'; }
+var SRC = { rustore: ['📲', 'RuStore', '#2563eb'], apk: ['📦', 'APK с сайта', '#16a34a'], web: ['🌐', 'Сайт', '#7c3aed'], tg: ['✈️', 'Telegram', '#0ea5e9'], yandex: ['🟡', 'Яндекс Игры', '#eab308'] };
+function srcOf(p) { var pr = p.pr || {}; return pr.src0 || pr.src || ''; }
+function srcChip(k) { var v = SRC[k]; return v ? '<span class="chip" style="background:' + v[2] + '33;color:#fff;border:1px solid ' + v[2] + '">' + v[0] + ' ' + v[1] + '</span>' : ''; }
+function regTime(p) { var pr = p.pr || {}; return pr.rt ? +pr.rt : 0; }
+function regText(p) {
+  var pr = p.pr || {}, t = regTime(p);
+  if (t) return new Date(t).toLocaleString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+  return pr.since ? pr.since + ' (время неизвестно — зарегистрирован до версии 5.9)' : '—';
+}
 function playerRow(p) {
   return '<div class="row click" data-uid="' + esc(p.u) + '"><div class="av">' + GBAV.html(p.a || 'i:kid') + '<i class="' + (p.on ? 'on' : '') + '"></i></div>' +
-    '<div class="m"><b>' + esc(p.n || 'без ника') + (p.ty === 'google' ? '<span class="chip g">Google</span>' : '<span class="chip">Гость</span>') + (!p.pr && !p.s ? '<span class="chip">старая версия</span>' : '') +
+    '<div class="m"><b>' + esc(p.n || 'без ника') + (p.ty === 'google' ? '<span class="chip g">Google</span>' : '<span class="chip">Гость</span>') + srcChip(srcOf(p)) + (!p.pr && !p.s ? '<span class="chip">старая версия</span>' : '') +
     (p.ban || p.ipBan ? '<span class="chip ban">БАН' + (p.ipBan && !p.ban ? ' IP' : '') + '</span>' : '') + '</b>' +
     '<small>' + (p.on ? 'в сети' : ago(p.s)) + ' · ID ' + esc(p.u.slice(0, 8)) + (p.b ? ' · ' + Object.keys(BADGES).filter(function (k) { return p.b[k]; }).map(function (k) { return BADGES[k][0]; }).join('') : '') + '</small></div></div>';
 }
@@ -468,9 +486,11 @@ function renderPlayers() {
     if (flt === 'ban' && !(p.ban || p.ipBan)) return false;
     if (flt === 'badge' && !(p.b && Object.keys(p.b).length)) return false;
     if (flt === 'sus' && !suspicion(p).length) return false;
+    if (flt.indexOf('s_') === 0 && srcOf(p) !== flt.slice(2)) return false;
+    if (flt === 'today' && !(regTime(p) > Date.now() - 86400000)) return false;
     return !ql || String(p.n).toLowerCase().indexOf(ql) >= 0 || p.u.toLowerCase().indexOf(ql) >= 0 || p.ip.indexOf(ql) >= 0;
   });
-  var key = function (p) { var pr = p.pr || {}; return srt === 'lv' ? +pr.lv || 0 : srt === 'co' ? +pr.co || 0 : srt === 'pl' ? +pr.pl || 0 : srt === 'new' ? Date.parse(String(pr.since || '').split('.').reverse().join('-')) || 0 : p.s || 0; };
+  var key = function (p) { var pr = p.pr || {}; return srt === 'lv' ? +pr.lv || 0 : srt === 'co' ? +pr.co || 0 : srt === 'pl' ? +pr.pl || 0 : srt === 'new' ? regTime(p) || Date.parse(String(pr.since || '').split('.').reverse().join('-')) || 0 : p.s || 0; };
   list = list.slice().sort(function (a, b) { return (b.on - a.on) * (srt === 'seen' ? 1 : 0) || key(b) - key(a); });
   $('#plist').innerHTML = '<div class="filters">' + SORTS.map(function (q) { return '<button class="' + (q[0] === srt ? 'on' : '') + '" data-srt="' + q[0] + '">↓ ' + q[1] + '</button>'; }).join('') + '</div>' +
     '<p class="note">Найдено: ' + list.length + (list.length > 200 ? ', показаны первые 200' : '') + '</p>' + list.slice(0, 200).map(playerRow).join('');
@@ -482,7 +502,9 @@ function openPlayer(uid) {
     '<small>' + (p.ty === 'google' ? 'Вход через Google' : 'Гость') + ' · ' + (p.on ? '🟢 в сети' : ago(p.s)) + '</small><div>' + badgeChips(p.b) + '</div></div></div>' +
     (pr.st ? '<p class="note">«' + esc(pr.st) + '»</p>' : '') +
     '<div class="grid2"><div class="kv"><small>Уровень</small><b>' + (pr.lv || '—') + '</b></div><div class="kv"><small>Медали</small><b>🥇' + (md[0] || 0) + ' 🥈' + (md[1] || 0) + ' 🥉' + (md[2] || 0) + '</b></div>' +
-    '<div class="kv"><small>Партий · таблиц с рекордами</small><b>' + (pr.pl || 0) + ' · ' + (p.games || 0) + '</b></div><div class="kv"><small>Играет с</small><b>' + esc(pr.since || '—') + '</b></div>' +
+    '<div class="kv"><small>Партий · таблиц с рекордами</small><b>' + (pr.pl || 0) + ' · ' + (p.games || 0) + '</b></div><div class="kv"><small>Последний заход</small><b>' + (p.on ? '🟢 сейчас' : p.s ? new Date(p.s).toLocaleString('ru-RU', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '—') + '</b></div>' +
+    '<div class="kv" style="grid-column:1/-1"><small>📅 Регистрация (первый запуск)</small><b>' + esc(regText(p)) + '</b></div>' +
+    '<div class="kv" style="grid-column:1/-1"><small>📍 Откуда</small><b>' + (SRC[srcOf(p)] ? SRC[srcOf(p)][0] + ' ' + SRC[srcOf(p)][1] : 'неизвестно (старая версия игры)') + (pr.src && pr.src0 && pr.src !== pr.src0 && SRC[pr.src] ? ' → сейчас ' + SRC[pr.src][0] + ' ' + SRC[pr.src][1] : '') + '</b></div>' +
     '<div class="kv"><small>ID</small><b>' + esc(uid) + '</b></div><div class="kv"><small>IP</small><b>' + esc(p.ip || (D && D.ipsOk ? 'неизвестен' : 'нет доступа')) + '</b></div></div>' +
     '<h2>Значки</h2><div class="badges">' + Object.keys(BADGES).map(function (k) {
       var on = p.b && p.b[k];
@@ -638,7 +660,7 @@ document.addEventListener('click', function (e) {
     act(req('PUT', '/app/maint', { on: true, text: $('#mt').value.trim().slice(0, 200), t: { '.sv': 'timestamp' } }), 'Техработы включены');
   }
   else if (a === 'maint-off') act(req('DELETE', '/app/maint'), 'Техработы выключены');
-  else if (a === 'export') copy('id;ник;тип;последний заход;уровень;партий;монет;ip\n' + D.players.map(function (q) { var pr = q.pr || {}; return [q.u, q.n, q.ty, q.s ? new Date(q.s).toLocaleString('ru-RU') : '', pr.lv || '', pr.pl || '', pr.co || '', q.ip].join(';'); }).join('\n'));
+  else if (a === 'export') copy('id;ник;тип;откуда;регистрация;последний заход;уровень;партий;монет;ip\n' + D.players.map(function (q) { var pr = q.pr || {}; return [q.u, q.n, q.ty, SRC[srcOf(q)] ? SRC[srcOf(q)][1] : '', regTime(q) ? new Date(regTime(q)).toLocaleString('ru-RU') : (pr.since || ''), q.s ? new Date(q.s).toLocaleString('ru-RU') : '', pr.lv || '', pr.pl || '', pr.co || '', q.ip].join(';'); }).join('\n'));
   else if (a === 'clean') {
     var E = emptyProfiles(); if (!E.length) return;
     if (Date.now() - (window.clAsk || 0) > 4000) { window.clAsk = Date.now(); toast('Нажми ещё раз: удалить ' + E.length + ' пустых профилей'); return; }

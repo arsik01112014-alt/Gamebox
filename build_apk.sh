@@ -3,6 +3,7 @@
 # Подпись: jarsigner (v1), затем выравнивание zipalign.py, затем подпись v2 (tools/ApkV2Sign.java).
 # Новый пакет (ставится рядом со старым): APP_PKG=com.arcade.minigame3 APP_VNAME=3.0 APP_VCODE=19
 # Админка: ASSETS_DIR=admin ASSETS_EXCLUSIVE=1 APP_LABEL=GBAdmin APP_PKG=com.arcade.gbadmin APP_VNAME=1.0 APP_VCODE=1
+# Канал установки: CHANNEL=rustore (сборка для RuStore) или CHANNEL=apk (скачивание с сайта)
 # Использование: KS_PASS=... [APP_PKG=...] build_apk.sh <исходный.apk> <результат.apk> <keystore.jks> <alias>
 set -eu
 BASE=$(realpath "$1"); OUT=$(realpath -m "$2"); KS=$(realpath "$3"); ALIAS=$4
@@ -20,7 +21,13 @@ if [ -n "${APP_LABEL:-}" ]; then
   python3 "$HERE/tools/patch_label.py" "$WORK/resources.arsc" GameBox "$APP_LABEL"
   export RESOURCES_ARSC="$WORK/resources.arsc"
 fi
-python3 "$HERE/tools/repack.py" "$BASE" "${ASSETS_DIR:-$HERE/assets}" "$WORK/unsigned.apk" $MANIFEST
+SRC_ASSETS="${ASSETS_DIR:-$HERE/assets}"
+# CHANNEL=rustore|apk — откуда установлено приложение; игра пишет это в профиль, админка показывает
+if [ -n "${CHANNEL:-}" ]; then
+  cp -r "$SRC_ASSETS" "$WORK/assets"; SRC_ASSETS="$WORK/assets"
+  printf "window.GB_CHANNEL = '%s';\n" "$CHANNEL" > "$SRC_ASSETS/js/channel.js"
+fi
+python3 "$HERE/tools/repack.py" "$BASE" "$SRC_ASSETS" "$WORK/unsigned.apk" $MANIFEST
 cp "$WORK/unsigned.apk" "$OUT"
 jarsigner -keystore "$KS" -storepass:env KS_PASS -sigalg SHA256withRSA -digestalg SHA-256 "$OUT" "$ALIAS" >/dev/null
 python3 "$HERE/zipalign.py" "$OUT"

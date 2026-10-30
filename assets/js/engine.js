@@ -7,7 +7,7 @@
     'stack', 'jumper', 'memory', 'mole', 'simon',
     'asteroids', 'crossy', 'fruit', 'knife', 'tiles', 'bubbles', 'connect4', 'reversi',
     'puzzle15', 'blocks', 'colorjump', 'airhockey', 'racing', 'archery', 'basket', 'maze', 'solitaire', 'yahtzee',
-    'sokoban', 'watersort', 'mahjong', 'gomoku', 'dots', 'bowling', 'minigolf', 'pinball', 'penalty', 'towerdef', 'numbers', 'reflex', 'dodge', 'lights', 'flood', 'hangman', 'nim', 'blackjack', 'guess', 'bulls', 'wordle', 'lines', 'blockblast', 'arrows', 'catcher', 'aim', 'clicker', 'dash', 'bricks', 'durak', 'flow', 'twocars', 'zigzag', 'mill', 'ugolki', 'rps', 'duel', 'tron', 'hex', 'dicepoker', 'mathduel', 'wordduel', 'kalah', 'quoridor', 'pentago', 'helix', 'swing', 'zombie', 'nonogram', 'pipes', 'hanoi', 'anagram', 'quiz', 'ultimate', 'go', 'minesduel', 'ninja', 'zuma', 'heli', 'suika', 'territory', 'sumo', 'bomber'].filter(function (id) { return GAMES[id]; });
+    'sokoban', 'watersort', 'mahjong', 'gomoku', 'dots', 'bowling', 'minigolf', 'pinball', 'penalty', 'towerdef', 'numbers', 'reflex', 'dodge', 'lights', 'flood', 'hangman', 'nim', 'blackjack', 'guess', 'bulls', 'wordle', 'lines', 'blockblast', 'arrows', 'catcher', 'aim', 'clicker', 'dash', 'bricks', 'durak', 'flow', 'twocars', 'zigzag', 'mill', 'ugolki', 'rps', 'duel', 'tron', 'hex', 'dicepoker', 'mathduel', 'wordduel', 'kalah', 'quoridor', 'pentago', 'helix', 'swing', 'zombie', 'nonogram', 'pipes', 'hanoi', 'anagram', 'quiz', 'ultimate', 'go', 'minesduel', 'ninja', 'zuma', 'heli', 'suika', 'territory', 'sumo', 'bomber', 'pig', 'paint', 'domino', 'poker'].filter(function (id) { return GAMES[id]; });
   var $ = function (s) { return document.querySelector(s); };
 
   /* ---------- хранилище ---------- */
@@ -338,7 +338,10 @@
   // игры за монеты: цена открытия, открытые хранятся в store 'unlocked'
   var LOCKED = { mario: 600, billiards: 500, towerdef: 500, pinball: 400, minigolf: 400, bowling: 300, mahjong: 300, lines: 250, wordle: 250 };
   var unlockAsk = null;
-  if (!store.get('since', '')) store.set('since', new Date().toLocaleDateString('ru-RU'));
+  if (!store.get('since', '')) { store.set('since', new Date().toLocaleDateString('ru-RU')); store.set('regT', Date.now()); } // regT — точное время первого запуска (с 5.9)
+  // откуда играет: rustore / apk (скачан с сайта) / tg (Telegram) / yandex / web (сайт в браузере)
+  function srcOf() { try { if (/tgWebApp/.test(location.hash + location.search) || (window.Telegram && Telegram.WebApp && Telegram.WebApp.initData)) return 'tg'; } catch (e) { } if (window.YANDEX) return 'yandex'; if (window.Android) return window.GB_CHANNEL || 'apk'; return 'web'; }
+  if (!store.get('src0', '')) store.set('src0', srcOf());
   function isLocked(id) { return !!LOCKED[id] && store.get('unlocked', []).indexOf(id) < 0; }
   // подтверждение повторным нажатием: confirm() в WebView приложения может не показываться
   function askUnlock(id) {
@@ -1383,7 +1386,7 @@
       '<button class="btn" data-set="close">' + t('set.done') + '</button>' +
       '<div class="ver">' + t('set.version') + ' ' + APP_NAME + '</div>';
   }
-  var APP_NAME = '5.8', APP_CODE = 58, updInfo = null, updBarHidden = false;
+  var APP_NAME = '5.9', APP_CODE = 59, updInfo = null, updBarHidden = false;
   // обновление APK: в /app/latest лежит {code, name, notes, url}, админка публикует его кнопкой.
   // WebView приложения не умеет скачивать файлы сам, поэтому «Скачать» копирует ссылку для браузера
   function checkUpdate() {
@@ -1619,7 +1622,7 @@
   function profileData() {
     var mc = medalCount(), a = store.get('acct', null) || {};
     return { n: deviceName().slice(0, 16), a: avatar(), st: store.get('pStatus', ''), c: store.get('pColor', ''), ty: googleUser() ? 'google' : (a.type || 'guest'), co: coins(),
-      lv: lvlInfo(store.get('xp', 0)).n, md: [mc[3], mc[2], mc[1]], pl: store.get('plays', 0), since: store.get('since', ''), t: { '.sv': 'timestamp' } };
+      lv: lvlInfo(store.get('xp', 0)).n, md: [mc[3], mc[2], mc[1]], pl: store.get('plays', 0), since: store.get('since', ''), rt: store.get('regT', 0) || null, src: srcOf(), src0: store.get('src0', ''), t: { '.sv': 'timestamp' } };
   }
   function beatPresence() {
     if (document.hidden || !Online.ok()) return;
