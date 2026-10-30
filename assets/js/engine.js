@@ -1383,7 +1383,7 @@
       '<button class="btn" data-set="close">' + t('set.done') + '</button>' +
       '<div class="ver">' + t('set.version') + ' ' + APP_NAME + '</div>';
   }
-  var APP_NAME = '5.7', APP_CODE = 57, updInfo = null, updBarHidden = false;
+  var APP_NAME = '5.8', APP_CODE = 58, updInfo = null, updBarHidden = false;
   // обновление APK: в /app/latest лежит {code, name, notes, url}, админка публикует его кнопкой.
   // WebView приложения не умеет скачивать файлы сам, поэтому «Скачать» копирует ссылку для браузера
   function checkUpdate() {

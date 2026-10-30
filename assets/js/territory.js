@@ -124,7 +124,12 @@ window.GAMES.territory = {
         // таблица лидеров
         var cnt = ents.map(function (e) { return { e: e, n: G.filter(function (v) { return v === e.id; }).length }; }).sort(function (a, b) { return b.n - a.n; });
         c.textAlign = 'left'; c.textBaseline = 'middle'; c.font = '800 12px system-ui';
-        cnt.slice(0, 3).forEach(function (r, k) { K.rr(c, 8, 8 + k * 18, 150, 15, 7); c.fillStyle = 'rgba(15,23,42,.15)'; c.fill(); K.rr(c, 8, 8 + k * 18, Math.max(16, 150 * Math.min(1, r.n / G.length * 2)), 15, 7); c.fillStyle = PAL[r.e.id - 1][0]; c.fill(); c.fillStyle = '#fff'; c.fillText((k + 1) + '. ' + NAMES[r.e.id - 1] + ' ' + (r.n / G.length * 100).toFixed(1) + '%', 14, 16 + k * 18); });
+        cnt.slice(0, 3).forEach(function (r, k) {
+          var yy = 8 + k * 18; K.rr(c, 8, yy, 160, 15, 7); c.fillStyle = 'rgba(255,255,255,.85)'; c.fill();
+          K.rr(c, 8, yy, Math.max(15, 160 * Math.min(1, r.n / G.length * 2)), 15, 7); c.fillStyle = PAL[r.e.id - 1][1]; c.fill();
+          c.fillStyle = PAL[r.e.id - 1][0]; c.beginPath(); c.arc(16, yy + 7.5, 5, 0, 6.283); c.fill();
+          c.fillStyle = r.e === me ? '#0369a1' : '#0f172a'; c.fillText((k + 1) + '. ' + NAMES[r.e.id - 1] + ' ' + (r.n / G.length * 100).toFixed(1) + '%', 25, yy + 8);
+        });
         c.textAlign = 'right'; c.fillStyle = '#0f172a'; c.font = '900 20px system-ui'; c.fillText('⏱ ' + Math.max(0, Math.ceil(timeLeft)), W - 12, 26);
         if (msgT > 0) K.toast(c, W, H - 24, msg, Math.min(1, msgT * 2));
         else if (t < 4) K.toast(c, W, H - 24, 'Свайпай, чтобы поворачивать', 1);
