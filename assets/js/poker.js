@@ -180,8 +180,8 @@ window.GAMES.poker = {
         // общие карты и банк
         var cw = Math.min(46, (W - 60) / 5.6);
         for (var i = 0; i < 5; i++) { var x = W / 2 - (5 * (cw + 6) - 6) / 2 + i * (cw + 6); if (board[i]) drawCard(c, x, ty - cw * 0.9, cw, board[i]); else { c.strokeStyle = 'rgba(255,255,255,.15)'; c.setLineDash([4, 4]); K.rr(c, x, ty - cw * 0.9, cw, cw * 1.4, cw * 0.14); c.stroke(); c.setLineDash([]); } }
-        c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillStyle = '#fde68a'; c.font = '900 16px system-ui'; c.fillText('Банк: ' + pot, W / 2, ty + cw * 0.85);
-        c.fillStyle = 'rgba(255,255,255,.55)'; c.font = '700 11px system-ui'; c.fillText('Блайнды ' + sb + '/' + bb + ' · раздача ' + hand, W / 2, ty + cw * 0.85 + 18);
+        c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillStyle = '#fde68a'; c.font = '900 16px system-ui'; c.fillText('Банк: ' + pot, W / 2, ty - cw * 0.9 - 30);
+        c.fillStyle = 'rgba(255,255,255,.55)'; c.font = '700 11px system-ui'; c.fillText('Блайнды ' + sb + '/' + bb + ' · раздача ' + hand, W / 2, ty - cw * 0.9 - 12);
         P.forEach(function (p, k) {
           var s = seat(k), isMe = k === 0, turn = phase === 'bet' && toAct === k, won = phase === 'show' && winners.indexOf(k) >= 0;
           c.globalAlpha = p.out ? 0.3 : p.fold ? 0.55 : 1;
